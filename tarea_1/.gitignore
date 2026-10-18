@@ -1,0 +1,15 @@
+# Entorno virtual — se reconstruye desde requirements.txt
+.venv/
+
+# Secretos (API keys del LLM)
+.env
+
+# Pesos del modelo — superan los 100 MB de GitHub
+modelo/*.safetensors
+modelo/*.bin
+modelo/checkpoint-*/
+
+# Basura generada automáticamente
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
