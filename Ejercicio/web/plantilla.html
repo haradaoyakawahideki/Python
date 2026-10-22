@@ -238,17 +238,23 @@ footer b { color: var(--ink); font-weight: 600; }
 
   <section class="bloque" id="relieve">
     <header class="sec">
-      <div class="eyebrow">Relieve · Copernicus DEM · últimos 7 días</div>
+      <div class="eyebrow">Sentinel-2 · lluvia · focos · últimos 7 días</div>
       <h2 class="h2big">El fuego baja a los valles</h2>
-      <p class="lede">Los mismos focos de la última semana, ahora sobre el relieve del distrito: valles verdes, laderas ocres y cumbres claras, con sombreado
-        desde el noroeste. Pasa el cursor sobre el mapa para leer la altitud. <b id="rl-resumen"></b></p>
+      <p class="lede">El distrito visto por Sentinel-2: un mosaico sin nubes de septiembre y octubre de 2026, a unos 220 m por píxel. Encima, la lluvia del día
+        elegido en celdas azules (más opacas = más lluvia) y los focos. En falso color (SWIR-NIR-rojo) la vegetación se ve verde y lo quemado o desnudo, morado o marrón.
+        Pasa el cursor para leer la lluvia y la altitud. <b id="rl-resumen"></b></p>
     </header>
     <div class="controls">
       <div class="dias" id="rl-dias" role="group" aria-label="Día"></div>
+      <div class="dias" role="group" aria-label="Imagen">
+        <button type="button" class="dia" id="rl-real" aria-pressed="true">Color real</button>
+        <button type="button" class="dia" id="rl-falso" aria-pressed="false">Falso color</button>
+      </div>
+      <label class="tog"><input id="rl-lluvia" type="checkbox" checked> Mostrar lluvia</label>
     </div>
     <div class="main">
       <div class="mapbox">
-        <svg id="rl-mapa" role="img" aria-label="Mapa de relieve de Río Tambo con los focos de los últimos 7 días"></svg>
+        <svg id="rl-mapa" role="img" aria-label="Imagen Sentinel-2 de Río Tambo con la lluvia y los focos de los últimos 7 días"></svg>
         <div class="mapyear small" id="rl-fecha"></div>
         <div class="legend" id="rl-leyenda"></div>
         <div class="tip" id="rl-tip" hidden></div>
@@ -261,6 +267,7 @@ footer b { color: var(--ink); font-weight: 600; }
             <dt>Altitud mediana del distrito</dt><dd id="rl-meddist"></dd>
             <dt>Focos bajo 1 000 m</dt><dd id="rl-bajo"></dd>
             <dt>Área del distrito bajo 1 000 m</dt><dd id="rl-bajodist"></dd>
+            <dt>Lluvia media del distrito</dt><dd id="rl-mm"></dd>
             <dt>Focos</dt><dd id="rl-focos"></dd>
           </dl>
         </div>
@@ -289,7 +296,9 @@ footer b { color: var(--ink); font-weight: 600; }
       <div><h3>Lluvia de los últimos 7 días</h3><p>Open-Meteo, modelo de pronóstico y análisis (mejor modelo disponible), lluvia horaria sumada por día
         del 14 al 21 de octubre de 2026 (hora de Lima) en una rejilla de 0,15°. No es ERA5, así que sus milímetros no se comparan con el mapa anterior.
         Las horas de los focos se pasan de UTC a hora de Lima (UTC−5). El 21 de octubre está incompleto.</p></div>
-      <div><h3>Relieve</h3><p>Copernicus DEM GLO-90 (90 m) de Planetary Computer, remuestreado a ~450 m para la imagen y a ~2 km para la lectura con el cursor.
+      <div><h3>Imagen Sentinel-2</h3><p>Sentinel-2 L2A de Planetary Computer, escenas del 1 de septiembre al 20 de octubre de 2026 con menos de 60 % de nubes.
+        Se quitan nubes, sombras y nieve con la capa SCL y se toma la mediana de cada banda, a ~220 m por píxel. Color real: B4-B3-B2. Falso color: B12-B8-B4.</p></div>
+      <div><h3>Relieve</h3><p>Copernicus DEM GLO-90 (90 m) de Planetary Computer, remuestreado a ~2 km para la lectura con el cursor.
         La altitud de cada foco se toma del píxel de ~450 m más cercano. Las franjas comparan el área del distrito con la proporción de focos en cada rango de altitud.</p></div>
       <div><h3>Herramientas</h3><p>Python (pandas, geopandas, rasterio, odc-stac) para descargar, cruzar y resumir. La página dibuja todo con SVG propio, sin mapas base externos.
         El código está en el notebook <code>incendios_2026.ipynb</code>, y <code>clima.py</code> descarga la lluvia y <code>web/exportar_relieve.py</code> el relieve.</p></div>
@@ -486,6 +495,7 @@ footer b { color: var(--ink); font-weight: 600; }
 <script>
 /*CLIMA*/
 /*RELIEVE*/
+/*S2*/
 (function () {
   const NS = "http://www.w3.org/2000/svg";
   const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
@@ -695,7 +705,18 @@ footer b { color: var(--ink); font-weight: 600; }
   const rlSvg = document.getElementById("rl-mapa"), rlBox = rlSvg.parentElement, rlTip = document.getElementById("rl-tip");
   const gR = base(rlSvg, "clipRl");
   const [bx0, by0, bx1, by1] = RZ.bbox;
-  el("image", { href: RZ.img, x: px(bx0), y: py(by1), width: px(bx1) - px(bx0), height: py(by0) - py(by1), preserveAspectRatio: "none" }, gR.celdas);
+  const [sx0, sy0, sx1, sy1] = S2.bbox;
+  const imgS2 = el("image", { href: S2.real, x: px(sx0), y: py(sy1), width: px(sx1) - px(sx0), height: py(sy0) - py(sy1), preserveAspectRatio: "none" }, gR.celdas);
+  // lluvia del día encima de la imagen, como celdas azules semitransparentes
+  const gLluviaR = el("g", { "clip-path": "url(#clipRl)" }, rlSvg);
+  rlSvg.insertBefore(gLluviaR, gR.borde);
+  const rectsR = P.celdas.map(([lon, lat]) => {
+    const x = px(lon - s7), y = py(lat + s7);
+    return el("rect", { x: x.toFixed(1), y: y.toFixed(1), width: (px(lon + s7) - x).toFixed(1), height: (py(lat - s7) - y).toFixed(1) }, gLluviaR);
+  });
+  const celdaEn = (lon, lat) => P.celdas.findIndex(([cx, cy]) => Math.abs(cx - lon) <= s7 && Math.abs(cy - lat) <= s7);
+  const valorR = c => selR === "todos" ? ppTotal[c] : ppDia[c][dias.indexOf(selR)];
+  let vista = "real", verLluvia = true;
   const altitud = (lon, lat) => {
     const i = Math.round((rj.lat0 - lat) / rj.paso - 0.4), j = Math.round((lon - rj.lon0) / rj.paso - 0.4);
     return rj.z[i] && rj.z[i][j] != null ? rj.z[i][j] : null;
@@ -705,7 +726,8 @@ footer b { color: var(--ink); font-weight: 600; }
     const r = rlSvg.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W, sy = (e.clientY - r.top) / r.height * H;
     const lon = (sx / W * (maxX - minX) + minX) / K, lat = -(sy / H * (maxY - minY) + minY), z = altitud(lon, lat);
     if (z == null) { rlTip.hidden = true; return; }
-    tipEn(rlTip, rlBox, e, `${fmt(z)} m s. n. m. · ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`);
+    const c = celdaEn(lon, lat);
+    tipEn(rlTip, rlBox, e, (c >= 0 ? `lluvia ${fmt(valorR(c), 1)} mm · ` : "") + `${fmt(z)} m s. n. m.`);
   });
   rlSvg.addEventListener("mouseleave", () => { rlTip.hidden = true; });
 
@@ -720,11 +742,23 @@ footer b { color: var(--ink); font-weight: 600; }
     b.textContent = o === "todos" ? "7 días" : fmtDia(o);
     b.addEventListener("click", () => { selR = o; dibujarRl(); }); rlDias.appendChild(b); return b;
   });
+  const bReal = document.getElementById("rl-real"), bFalso = document.getElementById("rl-falso");
+  const cambiarVista = v => { vista = v; bReal.setAttribute("aria-pressed", v === "real"); bFalso.setAttribute("aria-pressed", v === "falso"); dibujarRl(); };
+  bReal.addEventListener("click", () => cambiarVista("real"));
+  bFalso.addEventListener("click", () => cambiarVista("falso"));
+  document.getElementById("rl-lluvia").addEventListener("change", e => { verLluvia = e.target.checked; dibujarRl(); });
   const mediana = arr => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
 
   function dibujarRl() {
     botonesR.forEach((b, k) => b.setAttribute("aria-pressed", opciones[k] === selR ? "true" : "false"));
     const fs = focosR.filter(f => selR === "todos" || f.dia === selR);
+    imgS2.setAttribute("href", vista === "real" ? S2.real : S2.falso);
+    const tope = selR === "todos" ? topeTotal : topeDia, lo = css("--rain-lo"), hi = css("--rain-hi");
+    rectsR.forEach((r, c) => {
+      const v = Math.min(1, valorR(c) / tope);
+      r.setAttribute("fill", mezcla(lo, hi, v)); r.setAttribute("fill-opacity", verLluvia ? (0.15 + 0.6 * v).toFixed(2) : 0);
+      r.setAttribute("stroke", verLluvia ? "rgba(255,255,255,.35)" : "none"); r.setAttribute("stroke-width", 1);
+    });
     gR.puntos.replaceChildren();
     fs.forEach(f => {
       const c = el("circle", { cx: px(f.lon).toFixed(1), cy: py(f.lat).toFixed(1), r: 5.5, fill: css("--ember"), stroke: "#ffffff", "stroke-width": 1.4 }, gR.puntos);
@@ -739,7 +773,9 @@ footer b { color: var(--ink); font-weight: 600; }
     document.getElementById("rl-bajo").textContent = zs.length ? fmt(100 * zs.filter(z => z < 1000).length / zs.length) + " %" : "—";
     document.getElementById("rl-bajodist").textContent = fmt(100 * RZ.z_distrito.filter(z => z < 1000).length / RZ.z_distrito.length) + " %";
     document.getElementById("rl-focos").textContent = zs.length;
-    document.getElementById("rl-leyenda").innerHTML = `<span>200 m</span><i style="background:linear-gradient(90deg,#2f6b3a,#6f9a4a,#c7b56a,#a9784a,#7a5a44,#e9e4dc)"></i><span>4 000 m</span>`;
+    document.getElementById("rl-leyenda").innerHTML = verLluvia ? `<span>lluvia 0</span><i style="background:linear-gradient(90deg,${lo},${hi})"></i><span>${fmt(tope)} mm</span>` : "<span>Sentinel-2 L2A</span>";
+    const mm = media(P.celdas.map((_, c) => valorR(c)));
+    document.getElementById("rl-mm").textContent = fmt(mm, 1) + " mm";
     dibujarBandas(zs);
   }
   function dibujarBandas(zs) {

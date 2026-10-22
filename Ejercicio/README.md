@@ -96,10 +96,10 @@ La página tiene cuatro mapas interactivos y una sección de metodología al fin
 3. **Lluvia diaria y focos de los últimos 7 días** (lluvia horaria de Open-Meteo sumada por día, más focos FIRMS 7d),
    con un botón por día y otro para la semana completa. Los dos días más secos (14 y 15 de octubre, ~3 mm) tuvieron 31 y
    33 focos. Tras las lluvias del 16 al 18, los focos cayeron a cero el 17 y el 18.
-4. **Relieve y focos de los últimos 7 días** (Copernicus DEM de 90 m, sombreado y coloreado por altitud). El **98 %** de
-   los focos de la semana está bajo 1 000 m, aunque solo el 46 % del distrito está a esa altura. La altitud mediana de
-   los focos es 637 m y la del distrito, 1 101 m: el fuego se concentra en los valles.
+4. **Sentinel-2 con lluvia y focos de los últimos 7 días**: un mosaico sin nubes de Sentinel-2 L2A (sep–oct 2026,
+   ~220 m), en color real o falso color, con la lluvia del día en celdas azules y los focos encima. El **98 %** de los
+   focos de la semana está bajo 1 000 m (Copernicus DEM), aunque solo el 46 % del distrito está a esa altura.
 
-`clima.py` descarga la lluvia, `web/exportar_relieve.py` el relieve, y `web/exportar_clima.py` los prepara para la página.
+`clima.py` descarga la lluvia, `web/exportar_relieve.py` el relieve, `web/exportar_sentinel.py` el mosaico Sentinel-2, y `web/exportar_clima.py` los prepara para la página.
 
 `web/index.html` es una página autónoma: ábrela en el navegador y recorre los octubres de 2012 a 2026 con el control de año o el botón «Reproducir». Se regenera con los datos de `web/datos.js` sobre `web/plantilla.html`.
