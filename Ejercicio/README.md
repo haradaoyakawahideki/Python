@@ -88,4 +88,14 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 ## Mapa interactivo
 
+La página tiene tres mapas interactivos y una sección de metodología al final:
+
+1. **Focos año a año** (1–20 de octubre, 2012–2026).
+2. **Lluvia y focos** (Open-Meteo, ERA5 de 0,25°, 1–15 de octubre de cada año). 2026 es el octubre más seco de
+   la serie: 80 mm frente a 123 mm de promedio. En los 15 años, la correlación entre la lluvia y log(1 + focos) es **−0,82**.
+3. **Viento y focos de los últimos 7 días** (viento horario a 10 m de Open-Meteo, más focos FIRMS 7d), con
+   selector de día y de hora.
+
+`clima.py` descarga la lluvia y el viento, y `web/exportar_clima.py` los prepara para la página.
+
 `web/index.html` es una página autónoma: ábrela en el navegador y recorre los octubres de 2012 a 2026 con el control de año o el botón «Reproducir». Se regenera con los datos de `web/datos.js` sobre `web/plantilla.html`.
