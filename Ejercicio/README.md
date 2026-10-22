@@ -1,8 +1,9 @@
 # Incendios en el Perú 2026: ¿año récord?
 
-**Pregunta (reto E).** ¿Fue 2026 un año récord de focos de calor en el Perú, y en qué
-departamentos? Para el mínimo de la tarea medimos además el área quemada del **incendio de
-Río Tambo (Satipo, Junín)** con dNBR de Sentinel-2.
+**Pregunta (reto E).** ¿Fue octubre de 2026 un octubre récord de focos de calor en el Perú, y
+**en qué distritos fue peor que en sus propios octubres de 2012–2025**? Para el mínimo de la
+tarea medimos además el área quemada del **incendio de Río Tambo (Satipo, Junín)** con dNBR de
+Sentinel-2.
 
 Todo está en [`incendios_2026.ipynb`](incendios_2026.ipynb) (su fuente legible es
 `incendios_2026.py`).
@@ -21,13 +22,16 @@ FIRMS todavía no publica sin clave el archivo anual de 2026; por eso 2026 viene
 
 ## Método
 
-1. **Comparación igual con igual.** Cada año se cuenta del 1 de enero al 20 de octubre, solo
-   con el satélite S-NPP, y los focos se asignan a departamentos con un cruce espacial.
+1. **Mismo mes, año a año.** Cada año se cuentan solo los focos del **1 al 20 de octubre**
+   (2026 llega hasta el 20), con el satélite S-NPP. Comparar años completos mezclaría
+   temporadas distintas.
 2. **Calibración.** En los 7 días que cubren ambas fuentes, INPE cuenta **12 % más** focos que
    FIRMS (3 750 frente a 3 347). Los resultados de 2026 se reportan en bruto y corregidos.
-3. **Logaritmos.** Los cambios por departamento se miden como
-   `log(1 + focos 2026) − log(1 + promedio 2012–2025)`: suaviza los extremos y hace simétricas
-   las subidas y las bajadas (+0,69 es el doble; −0,69, la mitad).
+3. **Cada distrito contra sí mismo.** Los focos se asignan a distritos INEI. Cada distrito se
+   compara con el promedio y el máximo de **sus propios** octubres de 2012–2025, usando
+   `log(1 + focos oct 2026) − log(1 + promedio)`. El logaritmo suaviza los extremos (+0,69 es
+   el doble; −0,69, la mitad). Si el promedio es menor a 10 focos, la comparación se marca
+   «n. d.», como hace el monitor de referencia.
 4. **dNBR en Río Tambo.** `NBR = (B08 − B12) / (B08 + B12)` y `dNBR = NBR antes − NBR después`,
    en un recuadro de ~30 × 29 km alrededor del grupo de focos de octubre.
    - Las fechas se eligieron por la nubosidad **dentro de la zona** (capa SCL), no por la de la
@@ -40,21 +44,24 @@ FIRMS todavía no publica sin clave el archivo anual de 2026; por eso 2026 viene
 
 ## Hallazgos
 
-1. **En el acumulado del año, 2026 no es récord.** Del 1 de enero al 20 de octubre hubo
-   52 324 focos, **19 % menos** que el promedio 2012–2025 (puesto 12 de 15). El máximo es
-   2024, con 89 942.
-2. **Octubre sí es excepcional, pero el récord no es seguro.** Del 1 al 20 de octubre hubo
-   13 809 focos, **+97 %** sobre el promedio. Eso supera a 2020 (12 967) en bruto, pero al
-   corregir la diferencia de 12 % entre INPE y FIRMS queda en ~12 325: un empate técnico con 2020.
-3. **Solo Lima bate su récord departamental** (736 focos frente a un máximo previo de 630), y lo
-   mantiene tras la corrección. Apurímac duplica su promedio (+124 %), pero sin llegar a récord.
-4. **Río Tambo:** entre el 23 de septiembre y el 8 de octubre se quemaron **711 ha** (dNBR ≥ 0,27,
-   sembrado con focos). Al 13 de octubre van **al menos 1 609 ha**, de las cuales 1 561 ha están
-   dentro del distrito de Río Tambo. Esta cifra es un piso, porque el 33 % de la zona no tiene
-   dato válido.
+1. **Octubre de 2026 es el más alto en bruto, pero no es un récord claro.** Del 1 al 20 de
+   octubre hubo 13 809 focos, **+97 %** sobre el promedio 2012–2025 y más que 2020 (12 967).
+   Al corregir la diferencia de 12 % entre INPE y FIRMS queda en ~12 325: un empate técnico con 2020.
+2. **El aumento no es parejo, sino concentrado.** De los 108 distritos con historia suficiente,
+   la mitad (50 %) está por encima de su propio promedio de octubre y la mediana del cambio es
+   +0,00. Solo 15 distritos duplican su promedio y **8 baten su récord propio** aun después de
+   la corrección: Curahuasi, Moyobamba, Manantay, Yarinacocha, Nueva Requena, Río Tambo,
+   Bagua Grande y Bellavista. Curahuasi pasa de un promedio de 18 focos a 369.
+3. **Río Tambo** tuvo 335 focos en octubre de 2026, frente a un promedio de 126 y un máximo
+   previo de 277 (2020).
+4. **Su incendio principal**, medido con dNBR, quemó **711 ha** entre el 23 de septiembre y el
+   8 de octubre (dNBR ≥ 0,27, sembrado con focos). Al 13 de octubre van **al menos 1 609 ha**,
+   de las cuales 1 561 ha están dentro del distrito. Esta cifra es un piso, porque el 33 % de
+   la zona no tiene dato válido.
 
-![Focos por año](figuras/focos_por_anio.png)
-![Departamentos](figuras/mapa_departamentos.png)
+![Octubres por año](figuras/focos_octubre_por_anio.png)
+![Distritos](figuras/mapa_distritos.png)
+![Río Tambo octubres](figuras/rio_tambo_octubres.png)
 ![Río Tambo dNBR](figuras/rio_tambo_dnbr.png)
 
 ## Limitaciones
@@ -67,8 +74,10 @@ FIRMS todavía no publica sin clave el archivo anual de 2026; por eso 2026 viene
   como nube. Por eso esa fecha subestima el área quemada.
 - **El cambio de fuente.** La corrección de 12 % sale de solo 7 días y varía mucho entre días
   (+6 % a +28 %).
-- En 2026 no se pueden quitar las fuentes fijas y los volcanes (INPE no los marca). En
-  2012–2025 son el 2,3 % de los focos.
+- En 2026 no se pueden quitar las fuentes fijas y los volcanes (INPE no los marca). En los octubres
+  de 2012–2025 son el 1,4 % de los focos.
+- Solo 108 de 1 834 distritos tienen historia suficiente: en la mayoría de la costa y la sierra
+  hay muy pocos focos para comparar.
 - El umbral de dNBR y la regla de sembrado son decisiones de método: el área de «toda la zona»
   sin sembrar da 1 185 ha al 8 de octubre.
 
