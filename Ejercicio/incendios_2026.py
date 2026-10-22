@@ -2,16 +2,20 @@
 # # Río Tambo en llamas: ¿octubre de 2026 es el peor de su historia?
 #
 # **Pregunta (reto E).** ¿Fue octubre de 2026 el peor octubre de focos de calor del **distrito de
-# Río Tambo (Satipo, Junín)** desde 2012? Y, para el mínimo de la tarea, ¿cuánto quemó su
-# incendio principal según el dNBR de Sentinel-2?
+# Río Tambo (Satipo, Junín)** desde 2012? ¿Por qué, según la lluvia, y dónde arde, según el
+# territorio? Para el mínimo de la tarea, ¿cuánto quemó su incendio principal según el dNBR?
 #
 # Plan:
 # 1. Focos VIIRS S-NPP 2012–2025 (NASA FIRMS) y 2026 (INPE Queimadas, porque FIRMS aún no
 #    publica el archivo anual de 2026 sin clave).
 # 2. Calibrar INPE contra FIRMS en los días que ambos cubren.
 # 3. Contar los focos de Río Tambo del 1 al 20 de octubre de cada año y comparar 2026 con su
-#    propia historia, en total y día a día.
-# 4. Sentinel-2 L2A en el incendio principal: NBR, dNBR, máscara de nubes con SCL, hectáreas.
+#    propia historia, en total, día a día y en un mapa animado.
+# 4. Medir el incendio principal con dNBR de Sentinel-2.
+# 5. Explicar con la lluvia ERA5, octubre a octubre.
+# 6. Bajar a la última semana: lluvia diaria y focos.
+# 7. Ubicar el fuego en el territorio: Sentinel-2 y relieve.
+# 8. Construir la página web con todo lo anterior.
 
 # %%
 import glob
@@ -387,18 +391,161 @@ plt.savefig(f"{FIG}/rio_tambo_dnbr.png", bbox_inches="tight")
 plt.show()
 
 # %% [markdown]
-# ## 5 · Hallazgos (se llenan solos con los números de arriba)
+# ## 5 · ¿Por qué 2026? La lluvia, octubre a octubre
+#
+# Si el fuego depende de qué tan seca esté la vegetación, un octubre más seco debería tener más
+# focos. Usamos la lluvia del reanálisis **ERA5** (Open-Meteo, celdas de 0,25°) sumada del **1 al
+# 15 de octubre** de cada año en las celdas que tocan el distrito (la descarga está en `clima.py`).
+#
+# **Decisión: cortar el 15.** ERA5 todavía no tiene los días siguientes de 2026, y la versión de
+# Open-Meteo que llega al 20 mezcla otro modelo con lluvias muy distintas (31 mm frente a 4 mm en
+# el mismo punto). Para comparar igual con igual, todos los años y los focos de esta sección usan
+# la misma ventana del 1 al 15.
+
+# %%
+import json
+
+clima = json.load(open("datos/clima/open_meteo.json"))
+lluvia = pd.Series({int(a): np.mean(v) for a, v in clima["lluvia"].items()}, name="lluvia_mm")
+focos15 = rt[rt.dia <= 15].groupby("anio").size().reindex(range(2012, 2027), fill_value=0).rename("focos_1_15")
+anual = pd.concat([lluvia, focos15], axis=1)
+anual["log_focos"] = np.log1p(anual.focos_1_15)
+r_lluvia = anual.lluvia_mm.corr(anual.log_focos)
+r_sin_2026 = anual.loc[:2025, "lluvia_mm"].corr(anual.loc[:2025, "log_focos"])
+puesto_seco = int(anual.lluvia_mm.rank().loc[2026])
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.scatter(anual.lluvia_mm, anual.focos_1_15, color=["#c1663f" if a == 2026 else "#9aa7b0" for a in anual.index], s=40)
+for a, f in anual.iterrows():
+    ax.annotate(str(a)[2:], (f.lluvia_mm, f.focos_1_15), fontsize=7, xytext=(4, 3), textcoords="offset points")
+ax.set_yscale("log")
+ax.set_xlabel("lluvia ERA5 del 1 al 15 de octubre (mm, media del distrito)")
+ax.set_ylabel("focos del 1 al 15 de octubre (escala log)")
+ax.set_title(f"Río Tambo: menos lluvia, más focos (r = {r_lluvia:.2f} con log(1 + focos))", fontsize=9.5)
+plt.tight_layout()
+plt.savefig(f"{FIG}/lluvia_vs_focos.png", bbox_inches="tight")
+plt.show()
+
+print(anual.round(1).to_string())
+print(f"\ncorrelación lluvia vs log(1+focos): {r_lluvia:.2f} (sin 2026: {r_sin_2026:.2f}) | "
+      f"2026 es el octubre n.º {puesto_seco} más seco de 15")
+
+# %% [markdown]
+# ## 6 · La última semana: lluvia diaria y focos
+#
+# Para ver la relación de cerca, bajamos a escala diaria en la última semana (14–21 de octubre):
+# focos de **FIRMS 7d** dentro del distrito y lluvia horaria de Open-Meteo (mejor modelo
+# disponible, rejilla de 0,15°) sumada por día en hora de Lima. No es ERA5, así que sus milímetros
+# no se comparan con los de la sección 5. El 21 de octubre está incompleto y no entra en la
+# comparación.
+
+# %%
+f7 = pd.read_csv("datos/firms/SUOMI_VIIRS_C2_South_America_7d.csv")
+f7["local"] = (pd.to_datetime(f7.acq_date + " " + f7.acq_time.astype(str).str.zfill(4), format="%Y-%m-%d %H%M")
+               - pd.Timedelta(hours=5))
+f7 = gpd.GeoDataFrame(f7, geometry=gpd.points_from_xy(f7.longitude, f7.latitude), crs=4326)
+f7 = gpd.sjoin(f7, rio_tambo[["geometry"]], predicate="within").drop(columns="index_right")
+
+v = clima["viento"]
+pp = pd.DataFrame(v["pp"], columns=pd.to_datetime(v["horas"])).T          # horas × celdas
+semana = pd.DataFrame({
+    "lluvia_mm": pp.groupby(pp.index.date).sum().mean(axis=1),
+    "focos": f7.groupby(f7.local.dt.date).size(),
+}).fillna(0)
+semana.index = pd.to_datetime(semana.index).strftime("%d oct")
+completos = semana.iloc[:-1]
+r_semana = completos.lluvia_mm.corr(np.log1p(completos.focos))
+
+fig, ax = plt.subplots(figsize=(7, 3.2))
+ax.bar(semana.index, semana.focos, color="#c1663f")
+ax.set_ylabel("focos")
+ax2 = ax.twinx()
+ax2.plot(semana.index, semana.lluvia_mm, color="#1f5f8b", marker="o")
+ax2.set_ylabel("lluvia media (mm)", color="#1f5f8b")
+ax.set_title("Río Tambo, última semana: focos FIRMS por día y lluvia media del distrito", fontsize=9.5)
+plt.tight_layout()
+plt.savefig(f"{FIG}/semana_lluvia_focos.png", bbox_inches="tight")
+plt.show()
+print(semana.round(1).to_string())
+print(f"\ncorrelación lluvia vs log(1+focos) en {len(completos)} días completos: {r_semana:.2f}")
+
+# %% [markdown]
+# ## 7 · ¿Dónde arde? Sentinel-2 y relieve
+#
+# **Imagen.** Para ver el territorio, la web usa un mosaico **Sentinel-2 L2A** sin nubes: 78
+# escenas del 1 de septiembre al 20 de octubre de 2026, con nubes, sombras y nieve quitadas con la
+# capa SCL y la **mediana** de cada banda a ~220 m por píxel (color real B4-B3-B2 y falso color
+# B12-B8-B4). Lo arma `web/exportar_sentinel.py`; tarda varios minutos, por eso no se repite aquí
+# salvo que `REHACER_MOSAICO = True`.
+#
+# **Relieve.** Con el **Copernicus DEM GLO-90** comparamos la altitud de los focos de la última
+# semana con la del distrito: si el fuego no dependiera del relieve, ambas distribuciones se
+# parecerían.
+
+# %%
+import subprocess
+import sys
+
+REHACER_MOSAICO = False
+if REHACER_MOSAICO:
+    subprocess.run([sys.executable, "web/exportar_sentinel.py"], check=True)
+
+dem_items = cat.search(collections=["cop-dem-glo-90"], bbox=list(rio_tambo.total_bounds)).item_collection()
+dem = odc.stac.load(dem_items, bbox=list(rio_tambo.total_bounds), crs="EPSG:4326", resolution=0.004).data.max("time")
+dentro = features.rasterize([(rio_tambo.geometry.iloc[0], 1)], out_shape=dem.shape,
+                            transform=dem.odc.geobox.affine).astype(bool)
+z_distrito = dem.values[dentro]
+z_focos = np.array([int(dem.sel(longitude=p.x, latitude=p.y, method="nearest")) for p in f7.geometry])
+
+BANDAS = [0, 500, 1000, 1500, 2000, 3000, 5000]
+etiquetas = [f"{a:,}–{b:,} m" for a, b in zip(BANDAS[:-1], BANDAS[1:])]
+altitud = pd.DataFrame({
+    "% del área": pd.Series(pd.cut(z_distrito, BANDAS, labels=etiquetas)).value_counts(normalize=True).sort_index() * 100,
+    "% de los focos": pd.Series(pd.cut(z_focos, BANDAS, labels=etiquetas)).value_counts(normalize=True).sort_index() * 100,
+})
+bajo_focos, bajo_area = (z_focos < 1000).mean() * 100, (z_distrito < 1000).mean() * 100
+
+fig, ax = plt.subplots(figsize=(6.5, 3.2))
+altitud.plot.barh(ax=ax, color=["#9aa7b0", "#c1663f"])
+ax.invert_yaxis()
+ax.set_xlabel("%")
+ax.set_title("Río Tambo: altitud del distrito frente a la de los focos (14–21 oct 2026)", fontsize=9.5)
+plt.tight_layout()
+plt.savefig(f"{FIG}/altitud_focos.png", bbox_inches="tight")
+plt.show()
+print(altitud.round(0).to_string())
+print(f"\nfocos bajo 1 000 m: {bajo_focos:.0f} % | área bajo 1 000 m: {bajo_area:.0f} % | "
+      f"altitud mediana: focos {np.median(z_focos):.0f} m, distrito {np.median(z_distrito):.0f} m")
+
+# %% [markdown]
+# ## 8 · La página web
+#
+# La web (`docs/index.html`, publicada con GitHub Pages) muestra estas mismas piezas en el orden
+# del análisis: (1) focos de octubre año a año, (2) lluvia ERA5 y focos año a año, (3) lluvia
+# diaria y focos de la última semana y (4) Sentinel-2 con lluvia, focos y relieve, más la
+# metodología. Estos scripts la regeneran a partir de los mismos datos del notebook.
+
+# %%
+for script in ["web/exportar_clima.py", "web/exportar_relieve.py", "web/construir_web.py"]:
+    subprocess.run([sys.executable, script], check=True, capture_output=True)
+print("web/index.html y ../docs/index.html actualizados")
+
+# %% [markdown]
+# ## 9 · Hallazgos (se llenan solos con los números de arriba)
 
 # %%
 hallazgos = [
-    f"1. Del 1 al 20 de octubre de 2026 Río Tambo tuvo {serie[2026]} focos VIIRS S-NPP, frente a un promedio de "
-    f"{historia.mean():.0f} en 2012–2025: ≈ {np.exp(log_dif):.1f} veces su promedio (log_dif {log_dif:+.2f}), puesto {rk[2026]} de {len(rk)}.",
-    f"2. El máximo previo fue {historia.max()} focos en {historia.idxmax()}. Aun corrigiendo el {total_dif:+.1f} % de INPE "
-    f"frente a FIRMS, 2026 queda en {corr_2026:.0f}: {'sigue siendo récord' if corr_2026 > historia.max() else 'ya no es récord'}.",
-    f"3. 2026 supera al promedio desde el {supera_prom} de octubre"
-    + (f" y a {historia.idxmax()} desde el {dia_max}" if dia_max else "") +
-    f"; entre el 4 y el 6 de octubre se concentró el {(acum.loc[2026, 6] - acum.loc[2026, 3]) / serie[2026]:.0%} de los focos.",
-    f"4. Su incendio principal quemó {resumen.iloc[1]['≥0,27 (ha)']:,.0f} ha entre el {ANTES} y el {DESPUES} "
+    f"1. Del 1 al 20 de octubre de 2026 Río Tambo tuvo {serie[2026]} focos VIIRS S-NPP, ≈ {np.exp(log_dif):.1f} veces su "
+    f"promedio 2012–2025 ({historia.mean():.0f}): el peor octubre de la serie (puesto {rk[2026]} de {len(rk)}).",
+    f"2. El récord resiste la calibración: el máximo previo fue {historia.max()} en {historia.idxmax()}, y 2026 corregido "
+    f"({total_dif:+.1f} % de INPE frente a FIRMS) queda en {corr_2026:.0f}. Despegó el 4 de octubre.",
+    f"3. 2026 es el octubre más seco de la serie ({anual.lluvia_mm[2026]:.0f} mm del 1 al 15, frente a "
+    f"{anual.lluvia_mm.loc[:2025].mean():.0f} de promedio). En 15 años, lluvia y log(1 + focos) correlacionan {r_lluvia:.2f}.",
+    f"4. En la última semana, los días secos del 14 y 15 tuvieron {int(semana.focos.iloc[0])} y {int(semana.focos.iloc[1])} "
+    f"focos; tras las lluvias, el 17 y 18 no hubo ninguno.",
+    f"5. El fuego está en los valles: el {bajo_focos:.0f} % de los focos de la semana está bajo 1 000 m, aunque solo el "
+    f"{bajo_area:.0f} % del distrito está a esa altura.",
+    f"6. Su incendio principal quemó {resumen.iloc[1]['≥0,27 (ha)']:,.0f} ha entre el {ANTES} y el {DESPUES} "
     f"(dNBR ≥ 0,27, sembrado con focos); al {DESPUES_2} van al menos {resumen.iloc[2]['≥0,27 (ha)']:,.0f} ha.",
 ]
 print("\n".join(hallazgos))

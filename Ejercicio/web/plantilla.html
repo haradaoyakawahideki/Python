@@ -96,6 +96,12 @@ svg text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
 .dias { display: flex; flex-wrap: wrap; gap: 6px; }
 button.dia { min-width: 0; padding: 6px 10px; background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
 button.dia[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.respuesta { margin: 8px 0 0; padding-left: 1.2em; display: grid; gap: 4px; max-width: 80ch; }
+.respuesta li::marker { color: var(--ember); font-family: var(--font-mono); }
+.dnbr { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+@media (max-width: 860px) { .dnbr { grid-template-columns: minmax(0, 1fr); } }
+.dnbr figure { margin: 0; padding: 8px; background: #ffffff; }
+.dnbr img { display: block; width: 100%; height: auto; }
 .metodo h3 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0 0 4px; }
 .metodo p { margin: 0; font-size: 14px; color: var(--muted); max-width: 68ch; }
 .metodo code { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
@@ -112,6 +118,12 @@ footer b { color: var(--ink); font-weight: 600; }
     <p class="lede">Cada punto es un foco de calor detectado por satélite dentro del distrito. Recorre los octubres
       año a año: en 2026 hubo <b>335 focos</b>, <b>2,7 veces</b> su promedio, y el récord resiste aun corrigiendo
       la diferencia entre fuentes.</p>
+    <ol class="respuesta">
+      <li><b>Récord:</b> 335 focos del 1 al 20 de octubre, frente a un máximo previo de 277 (2020). Corregido por calibración, ~299.</li>
+      <li><b>Por qué:</b> es el octubre más seco de la serie (80 mm del 1 al 15, frente a 123 mm de promedio). Menos lluvia, más focos: r = −0,82 en 15 años.</li>
+      <li><b>Dónde:</b> el 98 % de los focos de la última semana está bajo 1 000 m, en los valles, aunque solo el 46 % del distrito está a esa altura.</li>
+      <li><b>Cuánto quemó:</b> el incendio principal, medido con dNBR de Sentinel-2, suma al menos 1 609 ha al 13 de octubre.</li>
+    </ol>
   </header>
 
   <div class="controls">
@@ -159,6 +171,30 @@ footer b { color: var(--ink); font-weight: 600; }
       <h2>Ritmo día a día</h2>
       <p class="sub">Focos acumulados del 1 al 20 de octubre: año elegido, promedio y 2020 (máximo previo).</p>
       <svg id="acum" viewBox="0 0 460 220" role="img" aria-label="Focos acumulados por día"></svg>
+    </div>
+  </section>
+
+  <section class="bloque" id="dnbr">
+    <header class="sec">
+      <div class="eyebrow">Sentinel-2 · dNBR · incendio principal</div>
+      <h2 class="h2big">Cuánto quemó el incendio principal</h2>
+      <p class="lede">El grupo de focos del centro-sur del distrito (−11,87°, −73,86°) se midió con el índice dNBR de Sentinel-2: la caída del NBR entre una imagen
+        antes (23 sep) y otra después del fuego. Solo cuentan las manchas con dNBR ≥ 0,27 que tienen un foco VIIRS a 500 m o menos.</p>
+    </header>
+    <div class="dnbr">
+      <figure class="card"><img src="/*DNBR*/" alt="Antes y después en falso color y mapa de dNBR del incendio de Río Tambo"></figure>
+      <div class="card">
+        <dl>
+          <dt>Antes</dt><dd>23 sep · 6,9 % nubes</dd>
+          <dt>Después (limpia)</dt><dd>8 oct · 2,3 % nubes</dd>
+          <dt>Quemado al 8 oct</dt><dd>711 ha</dd>
+          <dt>Después (más tarde)</dt><dd>13 oct · 30 % nubes</dd>
+          <dt>Quemado al 13 oct</dt><dd>≥ 1 609 ha</dd>
+          <dt>Dentro de Río Tambo</dt><dd>1 561 ha</dd>
+        </dl>
+        <p class="note">La imagen del 8 de octubre es la más limpia, pero tiene humo sobre el fuego. La del 13 muestra mejor la cicatriz, aunque un tercio de la zona
+          está bajo nubes: por eso su cifra es un piso.</p>
+      </div>
     </div>
   </section>
 
@@ -290,6 +326,9 @@ footer b { color: var(--ink); font-weight: 600; }
         promedio y máximo 2012–2025, y <code>log(1+n) − log(1+promedio)</code> para suavizar (+0,69 es el doble).</p></div>
       <div><h3>Calibración</h3><p>Del 14 al 20 de octubre de 2026, INPE contó en el Perú 12 % más focos que FIRMS (3 750 frente a 3 347). El valor de 2026 se reporta
         en bruto (335) y corregido (~299). El récord se mantiene en ambos casos (máximo previo: 277, en 2020).</p></div>
+      <div><h3>Área quemada (dNBR)</h3><p>Sentinel-2 L2A a 20 m: <code>NBR = (B8 − B12) / (B8 + B12)</code> y <code>dNBR = NBR antes − NBR después</code>.
+        Las fechas se eligieron por la nube <i>dentro de la zona</i> (capa SCL), no por la de la escena. Umbrales de severidad USGS; se cuentan las manchas
+        con dNBR ≥ 0,27 que tienen un foco VIIRS a ≤ 500 m, para no sumar cosechas, derrumbes o ríos que cambian de cauce.</p></div>
       <div><h3>Lluvia</h3><p>Open-Meteo, reanálisis ERA5 (0,25°), lluvia diaria sumada del 1 al 15 de octubre en cada celda que toca el distrito.
         Se corta el 15 porque ERA5 aún no tiene los días siguientes de 2026, y la misma ventana se usa para todos los años y para los focos del mapa de lluvia.
         La correlación se calcula entre la lluvia media del distrito y <code>log(1 + focos)</code>, con 15 años.</p></div>
@@ -300,6 +339,9 @@ footer b { color: var(--ink); font-weight: 600; }
         Se quitan nubes, sombras y nieve con la capa SCL y se toma la mediana de cada banda, a ~220 m por píxel. Color real: B4-B3-B2. Falso color: B12-B8-B4.</p></div>
       <div><h3>Relieve</h3><p>Copernicus DEM GLO-90 (90 m) de Planetary Computer, remuestreado a ~2 km para la lectura con el cursor.
         La altitud de cada foco se toma del píxel de ~450 m más cercano. Las franjas comparan el área del distrito con la proporción de focos en cada rango de altitud.</p></div>
+      <div><h3>Pasos</h3><p>El notebook <code>incendios_2026.ipynb</code> sigue el orden de esta página: (1) datos de focos, (2) calibración, (3) octubres de
+        Río Tambo y mapa año a año, (4) dNBR del incendio principal, (5) lluvia ERA5 por año, (6) lluvia y focos de la última semana, (7) Sentinel-2 y relieve,
+        (8) construcción de la web y (9) hallazgos.</p></div>
       <div><h3>Herramientas</h3><p>Python (pandas, geopandas, rasterio, odc-stac) para descargar, cruzar y resumir. La página dibuja todo con SVG propio, sin mapas base externos.
         El código está en el notebook <code>incendios_2026.ipynb</code>, y <code>clima.py</code> descarga la lluvia y <code>web/exportar_relieve.py</code> el relieve.</p></div>
       <div><h3>Limitaciones</h3><p>Un foco de calor no es un incendio: un incendio grande produce muchos focos, y una quema agrícola también produce focos. Las nubes esconden el fuego,
