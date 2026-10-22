@@ -1,0 +1,342 @@
+<title>Río Tambo en llamas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Focos de calor VIIRS del 1 al 20 de octubre en el distrito de Río Tambo, 2012–2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Mapa como pieza central; a su lado, la ficha del año. Debajo, la serie y el ritmo diario. */
+:root {
+  --bg: #f3f1ea;
+  --panel: #fbfaf6;
+  --ink: #1f2a22;
+  --muted: #637064;
+  --line: #d6d4c8;
+  --land: #e6e8dc;
+  --land-rt: #dfe5d0;
+  --ghost: #9aa59a;
+  --ember: #c4471d;
+  --ember-soft: #e8a27a;
+  --gold: #d79a1e;
+  --avg: #34453a;
+  --hot: #b03a12;
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141a16; --panel: #1b231e; --ink: #e8ece4; --muted: #9aa69c; --line: #2f3a33;
+    --land: #212b24; --land-rt: #29362c; --ghost: #5d6b60; --ember: #ff7a45; --ember-soft: #a8573a;
+    --gold: #f0b54a; --avg: #c9d4c8; --hot: #ff9466; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141a16; --panel: #1b231e; --ink: #e8ece4; --muted: #9aa69c; --line: #2f3a33;
+  --land: #212b24; --land-rt: #29362c; --ghost: #5d6b60; --ember: #ff7a45; --ember-soft: #a8573a;
+  --gold: #f0b54a; --avg: #c9d4c8; --hot: #ff9466; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 40px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 22px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 6vw, 58px); line-height: .98; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h1 em { font-style: normal; color: var(--ember); }
+.lede { max-width: 68ch; margin: 4px 0 0; color: var(--muted); }
+.lede b { color: var(--ink); font-weight: 600; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+.mapbox { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+#mapa { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1.05; max-height: 76vh; }
+.mapyear { position: absolute; top: 10px; left: 14px; font-family: var(--font-display); font-weight: 700; font-size: clamp(48px, 9vw, 92px); line-height: 1; color: var(--ink); opacity: .14; pointer-events: none; font-variant-numeric: tabular-nums; }
+.scale { position: absolute; right: 14px; bottom: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); display: grid; justify-items: end; gap: 3px; }
+.scale i { display: block; height: 4px; border: 1.5px solid var(--muted); border-top: 0; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-family: var(--font-mono); font-size: 12px; padding: 6px 8px; border-radius: 4px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); }
+
+.side { display: grid; gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 10px; }
+.big { font-family: var(--font-display); font-weight: 700; font-size: 64px; line-height: .9; font-variant-numeric: tabular-nums; }
+.big small { font-size: 20px; font-weight: 600; color: var(--muted); margin-left: 6px; }
+.chip { justify-self: start; font-family: var(--font-mono); font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.chip.up { color: var(--hot); } .chip.down { color: var(--muted); } .chip.rec { color: var(--bg); background: var(--ember); border-color: var(--ember); }
+dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; }
+dt { color: var(--muted); } dd { margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+button { font: 600 14px var(--font-body); color: var(--bg); background: var(--ink); border: 0; border-radius: 4px; padding: 8px 14px; cursor: pointer; min-width: 104px; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+input[type="range"] { flex: 1 1 220px; accent-color: var(--ember); min-width: 0; }
+label.tog { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+label.tog input { accent-color: var(--ember); }
+
+.charts { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 860px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+.charts h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; letter-spacing: .01em; }
+.charts .sub { font-size: 12.5px; color: var(--muted); margin: 0; }
+svg text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.bar { cursor: pointer; }
+.bar:hover { opacity: .8; }
+
+footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 6px; max-width: 90ch; }
+footer b { color: var(--ink); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Satipo · Junín · focos VIIRS S-NPP, 1–20 de octubre</div>
+    <h1>Río Tambo en llamas: <em>octubre de 2026</em> es el peor desde 2012</h1>
+    <p class="lede">Cada punto es un foco de calor detectado por satélite dentro del distrito. Recorre los octubres
+      año a año: en 2026 hubo <b>335 focos</b>, <b>2,7 veces</b> su promedio, y el récord resiste aun corrigiendo
+      la diferencia entre fuentes.</p>
+  </header>
+
+  <div class="controls">
+    <button id="play" type="button" aria-pressed="false">▶ Reproducir</button>
+    <input id="anio" type="range" min="2012" max="2026" step="1" value="2026" aria-label="Año">
+    <label class="tog"><input id="previos" type="checkbox" checked> Mostrar años anteriores</label>
+    <label class="tog"><input id="pordia" type="checkbox"> Colorear por día</label>
+  </div>
+
+  <div class="main">
+    <div class="mapbox">
+      <svg id="mapa" role="img" aria-label="Mapa de focos en Río Tambo"></svg>
+      <div class="mapyear" id="mapyear">2026</div>
+      <div class="scale"><span id="escalaTxt">20 km</span><i id="escala"></i></div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <aside class="side">
+      <div class="card">
+        <div class="eyebrow" id="fuente">Octubre 2026 · INPE</div>
+        <div class="big" id="n">335<small>focos</small></div>
+        <span class="chip" id="chip">récord</span>
+        <dl>
+          <dt>Promedio 2012–2025</dt><dd id="prom">126</dd>
+          <dt>Frente a su promedio</dt><dd id="veces">2,7×</dd>
+          <dt>log(1+n) − log(1+prom.)</dt><dd id="logd">+0,98</dd>
+          <dt>Puesto entre 15 octubres</dt><dd id="puesto">1</dd>
+        </dl>
+        <p class="note" id="nota"></p>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Cómo leer el mapa</div>
+        <p class="note">Puntos de color: el año elegido. Gris: todos los octubres anteriores. El contorno grueso es
+          Río Tambo; alrededor, los demás distritos de Satipo. Pasa el cursor sobre un foco para ver su fecha.</p>
+      </div>
+    </aside>
+  </div>
+
+  <section class="charts">
+    <div class="card">
+      <h2>Un octubre por barra</h2>
+      <p class="sub">Haz clic en una barra para ver ese año. Línea discontinua: promedio 2012–2025. Marca sobre 2026: valor corregido por calibración (−12 %).</p>
+      <svg id="barras" viewBox="0 0 560 220" role="img" aria-label="Focos por año"></svg>
+    </div>
+    <div class="card">
+      <h2>Ritmo día a día</h2>
+      <p class="sub">Focos acumulados del 1 al 20 de octubre: año elegido, promedio y 2020 (máximo previo).</p>
+      <svg id="acum" viewBox="0 0 460 220" role="img" aria-label="Focos acumulados por día"></svg>
+    </div>
+  </section>
+
+  <footer>
+    <div><b>Datos.</b> 2012–2025: NASA FIRMS, archivo anual VIIRS S-NPP del Perú. 2026: INPE Queimadas (satélite NPP-375),
+      porque FIRMS aún no publica el año en curso sin clave. Límites distritales del INEI (peru-geojson).</div>
+    <div><b>Calibración.</b> Del 14 al 20 de octubre de 2026, INPE contó 12 % más focos que FIRMS en el Perú. Corregido, 2026 baja a ~299 focos y sigue
+      por encima del máximo previo (277, en 2020).</div>
+    <div><b>Límites.</b> Un foco de calor no es un incendio: un incendio grande produce muchos focos, y una quema agrícola también produce focos.
+      Las nubes esconden el fuego, y Río Tambo mide más de 10 000 km², así que un octubre con muchos focos puede sumar varios incendios distintos.</div>
+  </footer>
+</div>
+
+<script>
+/*DATOS*/
+(function () {
+  const ANIOS = []; for (let a = 2012; a <= 2026; a++) ANIOS.push(a);
+  const CORR = 1.12, LAT0 = -11.6;
+  const K = Math.cos(LAT0 * Math.PI / 180);
+  const pts = DATOS.pts.map(p => ({ lon: p[0], lat: p[1], anio: p[2], dia: p[3], hora: p[4], frp: p[5] }));
+  const serie = Object.fromEntries(ANIOS.map(a => [a, 0]));
+  pts.forEach(p => serie[p.anio]++);
+  const hist = ANIOS.filter(a => a < 2026).map(a => serie[a]);
+  const prom = hist.reduce((s, v) => s + v, 0) / hist.length;
+  const maxPrev = Math.max(...hist), anioMax = ANIOS[hist.indexOf(maxPrev)];
+  const orden = [...ANIOS].sort((a, b) => serie[b] - serie[a]);
+  const acum = {};
+  ANIOS.forEach(a => {
+    const c = new Array(20).fill(0);
+    pts.forEach(p => { if (p.anio === a) c[p.dia - 1]++; });
+    for (let i = 1; i < 20; i++) c[i] += c[i - 1];
+    acum[a] = c;
+  });
+  const acumProm = acum[2012].map((_, i) => ANIOS.filter(a => a < 2026).reduce((s, a) => s + acum[a][i], 0) / hist.length);
+
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const fmt = (v, d = 0) => v.toLocaleString("es-PE", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+  /* ---------- mapa ---------- */
+  const svg = document.getElementById("mapa");
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  DATOS.rt.flat().forEach(([lon, lat]) => { const x = lon * K, y = -lat; minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); });
+  const pad = 0.06; minX -= pad; maxX += pad; minY -= pad; maxY += pad;
+  const W = 1000, H = W * (maxY - minY) / (maxX - minX);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H.toFixed(0)}`);
+  svg.style.aspectRatio = `${W} / ${H.toFixed(0)}`;
+  const px = lon => (lon * K - minX) / (maxX - minX) * W;
+  const py = lat => (-lat - minY) / (maxY - minY) * H;
+  const path = rings => rings.map(r => "M" + r.map(([x, y]) => px(x).toFixed(1) + "," + py(y).toFixed(1)).join("L") + "Z").join("");
+
+  const gBase = el("g", {}, svg);
+  DATOS.vecinos.forEach(v => {
+    el("path", { d: path(v.r), class: "vec" }, gBase);
+  });
+  const rtPath = el("path", { d: path(DATOS.rt), class: "rt" }, gBase);
+  const gGhost = el("g", {}, svg), gNow = el("g", {}, svg);
+
+  // escala: 20 km en grados de latitud (~111 km/°)
+  const kmPx = (20 / 111) / (maxY - minY) * H;
+  const escala = document.getElementById("escala");
+  function pintarEscala() { escala.style.width = (kmPx * svg.getBoundingClientRect().width / W).toFixed(0) + "px"; }
+  window.addEventListener("resize", pintarEscala);
+
+  const tip = document.getElementById("tip"), mapbox = document.querySelector(".mapbox");
+  function mostrarTip(e, p) {
+    const r = mapbox.getBoundingClientRect();
+    tip.hidden = false;
+    tip.textContent = `${p.dia} oct ${p.anio} · ${p.hora.slice(0, 2)}:${p.hora.slice(2)} UTC` + (p.frp != null ? ` · ${fmt(p.frp, 1)} MW` : "");
+    tip.style.left = (e.clientX - r.left) + "px"; tip.style.top = (e.clientY - r.top) + "px";
+  }
+
+  function colores() {
+    gBase.querySelectorAll(".vec").forEach(p => { p.setAttribute("fill", css("--land")); p.setAttribute("stroke", css("--line")); p.setAttribute("stroke-width", "1"); });
+    rtPath.setAttribute("fill", css("--land-rt")); rtPath.setAttribute("stroke", css("--ink")); rtPath.setAttribute("stroke-width", "2.2");
+  }
+
+  const previos = document.getElementById("previos"), pordia = document.getElementById("pordia");
+  function colorDia(d) {
+    // del dorado (1 oct) a la brasa (20 oct)
+    const t = (d - 1) / 19, a = [215, 154, 30], b = [176, 40, 12];
+    return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+  }
+  function dibujarPuntos(anio) {
+    gGhost.replaceChildren(); gNow.replaceChildren();
+    if (previos.checked) {
+      const ghost = css("--ghost");
+      pts.forEach(p => { if (p.anio < anio) el("circle", { cx: px(p.lon).toFixed(1), cy: py(p.lat).toFixed(1), r: 2.6, fill: ghost, "fill-opacity": .35 }, gGhost); });
+    }
+    const base = anio === 2026 ? css("--ember") : css("--gold");
+    const borde = css("--panel");
+    pts.forEach(p => {
+      if (p.anio !== anio) return;
+      const c = el("circle", { cx: px(p.lon).toFixed(1), cy: py(p.lat).toFixed(1), r: 5.2, fill: pordia.checked ? colorDia(p.dia) : base, stroke: borde, "stroke-width": 1 }, gNow);
+      c.addEventListener("mouseenter", e => mostrarTip(e, p));
+      c.addEventListener("mousemove", e => mostrarTip(e, p));
+      c.addEventListener("mouseleave", () => { tip.hidden = true; });
+    });
+  }
+
+  /* ---------- ficha ---------- */
+  function ficha(anio) {
+    const n = serie[anio];
+    document.getElementById("mapyear").textContent = anio;
+    document.getElementById("fuente").textContent = `1–20 de octubre de ${anio} · ${anio === 2026 ? "INPE" : "NASA FIRMS"}`;
+    document.getElementById("n").innerHTML = `${fmt(n)}<small>focos</small>`;
+    document.getElementById("prom").textContent = fmt(prom);
+    document.getElementById("veces").textContent = fmt(n / prom, 1) + "×";
+    const ld = Math.log1p(n) - Math.log1p(prom);
+    document.getElementById("logd").textContent = (ld >= 0 ? "+" : "−") + fmt(Math.abs(ld), 2);
+    document.getElementById("puesto").textContent = orden.indexOf(anio) + 1;
+    const chip = document.getElementById("chip");
+    const record = orden[0] === anio;
+    chip.className = "chip " + (record ? "rec" : n > prom ? "up" : "down");
+    chip.textContent = record ? "el peor octubre desde 2012" : n > prom ? "sobre su promedio" : "bajo su promedio";
+    document.getElementById("nota").textContent = anio === 2026
+      ? `Corregido por la diferencia INPE–FIRMS (−12 %): ~${fmt(n / CORR)} focos, aún sobre el máximo previo de ${maxPrev} (${anioMax}).`
+      : anio === anioMax ? "Máximo de la serie 2012–2025." : "";
+  }
+
+  /* ---------- barras ---------- */
+  const barras = document.getElementById("barras");
+  function dibujarBarras(anio) {
+    barras.replaceChildren();
+    const L = 34, R = 8, T = 14, B = 26, w = 560 - L - R, h = 220 - T - B;
+    const top = 350, y = v => T + h - v / top * h, bw = w / ANIOS.length;
+    [0, 100, 200, 300].forEach(v => {
+      el("line", { x1: L, x2: L + w, y1: y(v), y2: y(v), stroke: css("--line"), "stroke-width": 1 }, barras);
+      el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, barras).textContent = v;
+    });
+    ANIOS.forEach((a, i) => {
+      const x = L + i * bw + 3, sel = a === anio;
+      const r = el("rect", { x, y: y(serie[a]), width: bw - 6, height: h - (y(serie[a]) - T), rx: 2, class: "bar",
+        fill: sel ? (a === 2026 ? css("--ember") : css("--gold")) : a === 2026 ? css("--ember-soft") : css("--ghost"), tabindex: 0, role: "button", "aria-label": `${a}: ${serie[a]} focos` }, barras);
+      r.addEventListener("click", () => ir(a));
+      r.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ir(a); } });
+      el("text", { x: x + (bw - 6) / 2, y: 220 - 8, "text-anchor": "middle", style: sel ? `fill:${css("--ink")};font-weight:500` : "" }, barras).textContent = "'" + String(a).slice(2);
+      if (sel) el("text", { x: x + (bw - 6) / 2, y: y(serie[a]) - 5, "text-anchor": "middle", style: `fill:${css("--ink")}` }, barras).textContent = serie[a];
+    });
+    el("line", { x1: L, x2: L + w, y1: y(prom), y2: y(prom), stroke: css("--avg"), "stroke-width": 1.2, "stroke-dasharray": "5 4" }, barras);
+    const xc = L + 14 * bw + 3;
+    el("line", { x1: xc - 3, x2: xc + bw - 3, y1: y(serie[2026] / CORR), y2: y(serie[2026] / CORR), stroke: css("--ink"), "stroke-width": 2 }, barras);
+  }
+
+  /* ---------- acumulado ---------- */
+  const ac = document.getElementById("acum");
+  function dibujarAcum(anio) {
+    ac.replaceChildren();
+    const L = 34, R = 56, T = 12, B = 26, w = 460 - L - R, h = 220 - T - B, top = 350;
+    const x = d => L + (d - 1) / 19 * w, y = v => T + h - v / top * h;
+    [0, 100, 200, 300].forEach(v => {
+      el("line", { x1: L, x2: L + w, y1: y(v), y2: y(v), stroke: css("--line") }, ac);
+      el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, ac).textContent = v;
+    });
+    [1, 5, 10, 15, 20].forEach(d => { el("text", { x: x(d), y: 220 - 8, "text-anchor": "middle" }, ac).textContent = d; });
+    const linea = (arr, color, ancho, dash, etiqueta) => {
+      el("path", { d: arr.map((v, i) => (i ? "L" : "M") + x(i + 1).toFixed(1) + "," + y(v).toFixed(1)).join(""), fill: "none", stroke: color, "stroke-width": ancho, "stroke-dasharray": dash || "" }, ac);
+      el("text", { x: x(20) + 6, y: y(arr[19]) + 4, style: `fill:${color}` }, ac).textContent = etiqueta;
+    };
+    linea(acumProm, css("--avg"), 1.4, "5 4", "prom.");
+    if (anio !== 2020) linea(acum[2020], css("--ghost"), 1.6, "", "2020");
+    linea(acum[anio], anio === 2026 ? css("--ember") : css("--gold"), 2.6, "", String(anio));
+    // 4 de octubre: despegue de 2026
+    el("line", { x1: x(4), x2: x(4), y1: T, y2: T + h, stroke: css("--line"), "stroke-dasharray": "2 3" }, ac);
+    el("text", { x: x(4) + 4, y: T + 10 }, ac).textContent = "4 oct";
+  }
+
+  /* ---------- estado ---------- */
+  const slider = document.getElementById("anio");
+  let anioActual = 2026;
+  function ir(a) {
+    anioActual = a; slider.value = a;
+    dibujarPuntos(a); ficha(a); dibujarBarras(a); dibujarAcum(a);
+  }
+  function todo() { colores(); ir(anioActual); pintarEscala(); }
+  slider.addEventListener("input", () => { parar(); ir(+slider.value); });
+  previos.addEventListener("change", () => dibujarPuntos(anioActual));
+  pordia.addEventListener("change", () => dibujarPuntos(anioActual));
+
+  const play = document.getElementById("play");
+  let timer = null;
+  function parar() { if (timer) { clearInterval(timer); timer = null; } play.textContent = "▶ Reproducir"; play.setAttribute("aria-pressed", "false"); }
+  play.addEventListener("click", () => {
+    if (timer) return parar();
+    play.textContent = "❚❚ Pausa"; play.setAttribute("aria-pressed", "true");
+    if (anioActual === 2026) ir(2012);
+    timer = setInterval(() => { if (anioActual >= 2026) return parar(); ir(anioActual + 1); }, 1100);
+  });
+
+  // al cambiar el tema, repintar con los nuevos tokens
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", todo);
+  new MutationObserver(todo).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  todo();
+})();
+</script>

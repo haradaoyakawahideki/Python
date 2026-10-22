@@ -85,3 +85,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ./descargar_datos.sh          # ~870 MB, todo público y sin clave
 .venv/bin/jupyter nbconvert --to notebook --execute incendios_2026.ipynb
 ```
+
+## Mapa interactivo
+
+`web/index.html` es una página autónoma: ábrela en el navegador y recorre los octubres de 2012 a 2026 con el control de año o el botón «Reproducir». Se regenera con los datos de `web/datos.js` sobre `web/plantilla.html`.
