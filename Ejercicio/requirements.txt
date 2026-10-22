@@ -1,0 +1,11 @@
+geopandas==1.0.1
+ipykernel==6.31.0
+matplotlib==3.9.4
+nbconvert==7.17.2
+numpy==2.0.2
+odc-stac==0.3.11
+pandas==2.3.3
+planetary-computer==1.0.0
+pystac-client==0.8.3
+rasterio==1.4.3
+scipy==1.13.1
