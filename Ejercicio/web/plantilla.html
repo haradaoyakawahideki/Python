@@ -1,0 +1,808 @@
+<title>Río Tambo en llamas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Focos de calor VIIRS del 1 al 20 de octubre en el distrito de Río Tambo, 2012–2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Mapa como pieza central; a su lado, la ficha del año. Debajo, la serie y el ritmo diario. */
+:root {
+  --bg: #f3f1ea;
+  --panel: #fbfaf6;
+  --ink: #1f2a22;
+  --muted: #637064;
+  --line: #d6d4c8;
+  --land: #e6e8dc;
+  --land-rt: #dfe5d0;
+  --ghost: #9aa59a;
+  --ember: #c4471d;
+  --ember-soft: #e8a27a;
+  --gold: #d79a1e;
+  --avg: #34453a;
+  --hot: #b03a12;
+  --rain-lo: #eef3f1;
+  --rain-hi: #1f5f8b;
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141a16; --panel: #1b231e; --ink: #e8ece4; --muted: #9aa69c; --line: #2f3a33;
+    --land: #212b24; --land-rt: #29362c; --ghost: #5d6b60; --ember: #ff7a45; --ember-soft: #a8573a;
+    --gold: #f0b54a; --avg: #c9d4c8; --hot: #ff9466; --rain-lo: #1f2a26; --rain-hi: #5aa7dc; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141a16; --panel: #1b231e; --ink: #e8ece4; --muted: #9aa69c; --line: #2f3a33;
+  --land: #212b24; --land-rt: #29362c; --ghost: #5d6b60; --ember: #ff7a45; --ember-soft: #a8573a;
+  --gold: #f0b54a; --avg: #c9d4c8; --hot: #ff9466; --rain-lo: #1f2a26; --rain-hi: #5aa7dc; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 40px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 22px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 6vw, 58px); line-height: .98; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h1 em { font-style: normal; color: var(--ember); }
+.lede { max-width: 68ch; margin: 4px 0 0; color: var(--muted); }
+.lede b { color: var(--ink); font-weight: 600; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+@media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+.mapbox { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+#mapa { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1.05; max-height: 76vh; }
+.mapyear { position: absolute; top: 10px; left: 14px; font-family: var(--font-display); font-weight: 700; font-size: clamp(48px, 9vw, 92px); line-height: 1; color: var(--ink); opacity: .14; pointer-events: none; font-variant-numeric: tabular-nums; }
+.scale { position: absolute; right: 14px; bottom: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); display: grid; justify-items: end; gap: 3px; }
+.scale i { display: block; height: 4px; border: 1.5px solid var(--muted); border-top: 0; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-family: var(--font-mono); font-size: 12px; padding: 6px 8px; border-radius: 4px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); }
+
+.side { display: grid; gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 10px; }
+.big { font-family: var(--font-display); font-weight: 700; font-size: 64px; line-height: .9; font-variant-numeric: tabular-nums; }
+.big small { font-size: 20px; font-weight: 600; color: var(--muted); margin-left: 6px; }
+.chip { justify-self: start; font-family: var(--font-mono); font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.chip.up { color: var(--hot); } .chip.down { color: var(--muted); } .chip.rec { color: var(--bg); background: var(--ember); border-color: var(--ember); }
+dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; }
+dt { color: var(--muted); } dd { margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+button { font: 600 14px var(--font-body); color: var(--bg); background: var(--ink); border: 0; border-radius: 4px; padding: 8px 14px; cursor: pointer; min-width: 104px; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+input[type="range"] { flex: 1 1 220px; accent-color: var(--ember); min-width: 0; }
+label.tog { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+label.tog input { accent-color: var(--ember); }
+
+.charts { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 860px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+.charts h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; letter-spacing: .01em; }
+.charts .sub { font-size: 12.5px; color: var(--muted); margin: 0; }
+svg text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.bar { cursor: pointer; }
+.bar:hover { opacity: .8; }
+
+.bloque { display: grid; gap: 14px; padding-top: 18px; border-top: 1px solid var(--line); }
+.sec { display: grid; gap: 4px; }
+.h2big { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 4.4vw, 40px); line-height: 1; margin: 0; text-wrap: balance; }
+.mapyear.small { font-size: clamp(30px, 5vw, 52px); }
+.legend { position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); background: var(--panel); padding: 4px 6px; border-radius: 4px; }
+.legend i { display: block; width: 110px; height: 8px; border-radius: 2px; }
+.dias { display: flex; flex-wrap: wrap; gap: 6px; }
+button.dia { min-width: 0; padding: 6px 10px; background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
+button.dia[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.metodo h3 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0 0 4px; }
+.metodo p { margin: 0; font-size: 14px; color: var(--muted); max-width: 68ch; }
+.metodo code { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
+.metgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 18px 28px; }
+footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 6px; max-width: 90ch; }
+footer b { color: var(--ink); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Satipo · Junín · focos VIIRS S-NPP, 1–20 de octubre</div>
+    <h1>Río Tambo en llamas: <em>octubre de 2026</em> es el peor desde 2012</h1>
+    <p class="lede">Cada punto es un foco de calor detectado por satélite dentro del distrito. Recorre los octubres
+      año a año: en 2026 hubo <b>335 focos</b>, <b>2,7 veces</b> su promedio, y el récord resiste aun corrigiendo
+      la diferencia entre fuentes.</p>
+  </header>
+
+  <div class="controls">
+    <button id="play" type="button" aria-pressed="false">▶ Reproducir</button>
+    <input id="anio" type="range" min="2012" max="2026" step="1" value="2026" aria-label="Año">
+    <label class="tog"><input id="previos" type="checkbox" checked> Mostrar años anteriores</label>
+    <label class="tog"><input id="pordia" type="checkbox"> Colorear por día</label>
+  </div>
+
+  <div class="main">
+    <div class="mapbox">
+      <svg id="mapa" role="img" aria-label="Mapa de focos en Río Tambo"></svg>
+      <div class="mapyear" id="mapyear">2026</div>
+      <div class="scale"><span id="escalaTxt">20 km</span><i id="escala"></i></div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <aside class="side">
+      <div class="card">
+        <div class="eyebrow" id="fuente">Octubre 2026 · INPE</div>
+        <div class="big" id="n">335<small>focos</small></div>
+        <span class="chip" id="chip">récord</span>
+        <dl>
+          <dt>Promedio 2012–2025</dt><dd id="prom">126</dd>
+          <dt>Frente a su promedio</dt><dd id="veces">2,7×</dd>
+          <dt>log(1+n) − log(1+prom.)</dt><dd id="logd">+0,98</dd>
+          <dt>Puesto entre 15 octubres</dt><dd id="puesto">1</dd>
+        </dl>
+        <p class="note" id="nota"></p>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Cómo leer el mapa</div>
+        <p class="note">Puntos de color: el año elegido. Gris: todos los octubres anteriores. El contorno grueso es
+          Río Tambo; alrededor, los demás distritos de Satipo. Pasa el cursor sobre un foco para ver su fecha.</p>
+      </div>
+    </aside>
+  </div>
+
+  <section class="charts">
+    <div class="card">
+      <h2>Un octubre por barra</h2>
+      <p class="sub">Haz clic en una barra para ver ese año. Línea discontinua: promedio 2012–2025. Marca sobre 2026: valor corregido por calibración (−12 %).</p>
+      <svg id="barras" viewBox="0 0 560 220" role="img" aria-label="Focos por año"></svg>
+    </div>
+    <div class="card">
+      <h2>Ritmo día a día</h2>
+      <p class="sub">Focos acumulados del 1 al 20 de octubre: año elegido, promedio y 2020 (máximo previo).</p>
+      <svg id="acum" viewBox="0 0 460 220" role="img" aria-label="Focos acumulados por día"></svg>
+    </div>
+  </section>
+
+  <section class="bloque" id="lluvia">
+    <header class="sec">
+      <div class="eyebrow">Lluvia ERA5 · 1–15 de octubre</div>
+      <h2 class="h2big">Menos lluvia, más fuego</h2>
+      <p class="lede">Cada celda de ERA5 (0,25°, unos 27 km) se colorea con la lluvia acumulada del 1 al 15 de octubre del año elegido.
+        Los puntos son los focos de esa misma ventana. <b id="ll-resumen"></b></p>
+    </header>
+    <div class="controls">
+      <button id="ll-play" type="button" aria-pressed="false">▶ Reproducir</button>
+      <input id="ll-anio" type="range" min="2012" max="2026" step="1" value="2026" aria-label="Año de lluvia">
+    </div>
+    <div class="main">
+      <div class="mapbox">
+        <svg id="ll-mapa" role="img" aria-label="Mapa de lluvia y focos en Río Tambo"></svg>
+        <div class="mapyear" id="ll-year">2026</div>
+        <div class="legend" id="ll-leyenda"></div>
+        <div class="tip" id="ll-tip" hidden></div>
+      </div>
+      <aside class="side">
+        <div class="card">
+          <div class="eyebrow" id="ll-titulo">1–15 de octubre de 2026</div>
+          <div class="big" id="ll-mm">80<small>mm</small></div>
+          <span class="chip" id="ll-chip"></span>
+          <dl>
+            <dt>Lluvia promedio 2012–2025</dt><dd id="ll-prom"></dd>
+            <dt>Focos 1–15 oct</dt><dd id="ll-focos"></dd>
+            <dt>Puesto por sequía (1 = más seco)</dt><dd id="ll-rank"></dd>
+          </dl>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Cada año, un punto</div>
+          <svg id="ll-disp" viewBox="0 0 300 220" role="img" aria-label="Lluvia frente a focos por año"></svg>
+          <p class="note" id="ll-corr"></p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="bloque" id="lluvia7">
+    <header class="sec">
+      <div class="eyebrow">Lluvia diaria · últimos 7 días</div>
+      <h2 class="h2big">¿Llovió donde ardía?</h2>
+      <p class="lede">El mismo mapa de lluvia, ahora día por día en la última semana. Cada celda de 0,15° (unos 17 km) se colorea con la lluvia del día elegido,
+        o con la de toda la semana, y los puntos son los focos FIRMS de ese mismo período.</p>
+    </header>
+    <div class="controls">
+      <div class="dias" id="l7-dias" role="group" aria-label="Día"></div>
+    </div>
+    <div class="main">
+      <div class="mapbox">
+        <svg id="l7-mapa" role="img" aria-label="Mapa de lluvia de los últimos 7 días y focos en Río Tambo"></svg>
+        <div class="mapyear small" id="l7-fecha"></div>
+        <div class="legend" id="l7-leyenda"></div>
+        <div class="tip" id="l7-tip" hidden></div>
+      </div>
+      <aside class="side">
+        <div class="card">
+          <div class="eyebrow" id="l7-titulo"></div>
+          <div class="big" id="l7-mm"><small>mm</small></div>
+          <dl>
+            <dt>Celda más lluviosa</dt><dd id="l7-max"></dd>
+            <dt>Celdas con 1 mm o más</dt><dd id="l7-humedas"></dd>
+            <dt>Focos</dt><dd id="l7-focos"></dd>
+          </dl>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Focos y lluvia, día por día</div>
+          <svg id="l7-serie" viewBox="0 0 300 200" role="img" aria-label="Focos y lluvia por día"></svg>
+          <p class="note" id="l7-nota"></p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="bloque" id="relieve">
+    <header class="sec">
+      <div class="eyebrow">Sentinel-2 · lluvia · focos · últimos 7 días</div>
+      <h2 class="h2big">El fuego baja a los valles</h2>
+      <p class="lede">El distrito visto por Sentinel-2: un mosaico sin nubes de septiembre y octubre de 2026, a unos 220 m por píxel. Encima, la lluvia del día
+        elegido en celdas azules (más opacas = más lluvia) y los focos. En falso color (SWIR-NIR-rojo) la vegetación se ve verde y lo quemado o desnudo, morado o marrón.
+        Pasa el cursor para leer la lluvia y la altitud. <b id="rl-resumen"></b></p>
+    </header>
+    <div class="controls">
+      <div class="dias" id="rl-dias" role="group" aria-label="Día"></div>
+      <div class="dias" role="group" aria-label="Imagen">
+        <button type="button" class="dia" id="rl-real" aria-pressed="true">Color real</button>
+        <button type="button" class="dia" id="rl-falso" aria-pressed="false">Falso color</button>
+      </div>
+      <label class="tog"><input id="rl-lluvia" type="checkbox" checked> Mostrar lluvia</label>
+    </div>
+    <div class="main">
+      <div class="mapbox">
+        <svg id="rl-mapa" role="img" aria-label="Imagen Sentinel-2 de Río Tambo con la lluvia y los focos de los últimos 7 días"></svg>
+        <div class="mapyear small" id="rl-fecha"></div>
+        <div class="legend" id="rl-leyenda"></div>
+        <div class="tip" id="rl-tip" hidden></div>
+      </div>
+      <aside class="side">
+        <div class="card">
+          <div class="eyebrow" id="rl-titulo"></div>
+          <div class="big" id="rl-med"><small>m</small></div>
+          <dl>
+            <dt>Altitud mediana del distrito</dt><dd id="rl-meddist"></dd>
+            <dt>Focos bajo 1 000 m</dt><dd id="rl-bajo"></dd>
+            <dt>Área del distrito bajo 1 000 m</dt><dd id="rl-bajodist"></dd>
+            <dt>Lluvia media del distrito</dt><dd id="rl-mm"></dd>
+            <dt>Focos</dt><dd id="rl-focos"></dd>
+          </dl>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Altitud: área frente a focos</div>
+          <svg id="rl-bandas" viewBox="0 0 300 180" role="img" aria-label="Distribución de altitudes del distrito y de los focos"></svg>
+          <p class="note" id="rl-nota"></p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="bloque metodo" id="metodologia">
+    <h2 class="h2big">Metodología</h2>
+    <div class="metgrid">
+      <div><h3>Pregunta</h3><p>¿Fue octubre de 2026 el peor octubre de focos de calor de Río Tambo (Satipo, Junín) desde 2012? ¿Qué papel juegan la lluvia y el relieve?</p></div>
+      <div><h3>Focos de calor</h3><p>Satélite VIIRS S-NPP, 375 m. 2012–2025: archivo anual de NASA FIRMS para el Perú. 2026: INPE Queimadas (NPP-375 y NPP-375D),
+        porque FIRMS no publica sin clave el año en curso. Últimos 7 días: FIRMS «South America 7d». Se cuentan solo los focos dentro del límite INEI de Río Tambo.</p></div>
+      <div><h3>Misma ventana cada año</h3><p>Focos del 1 al 20 de octubre (2026 llega hasta el 20). La comparación es del distrito consigo mismo:
+        promedio y máximo 2012–2025, y <code>log(1+n) − log(1+promedio)</code> para suavizar (+0,69 es el doble).</p></div>
+      <div><h3>Calibración</h3><p>Del 14 al 20 de octubre de 2026, INPE contó en el Perú 12 % más focos que FIRMS (3 750 frente a 3 347). El valor de 2026 se reporta
+        en bruto (335) y corregido (~299). El récord se mantiene en ambos casos (máximo previo: 277, en 2020).</p></div>
+      <div><h3>Lluvia</h3><p>Open-Meteo, reanálisis ERA5 (0,25°), lluvia diaria sumada del 1 al 15 de octubre en cada celda que toca el distrito.
+        Se corta el 15 porque ERA5 aún no tiene los días siguientes de 2026, y la misma ventana se usa para todos los años y para los focos del mapa de lluvia.
+        La correlación se calcula entre la lluvia media del distrito y <code>log(1 + focos)</code>, con 15 años.</p></div>
+      <div><h3>Lluvia de los últimos 7 días</h3><p>Open-Meteo, modelo de pronóstico y análisis (mejor modelo disponible), lluvia horaria sumada por día
+        del 14 al 21 de octubre de 2026 (hora de Lima) en una rejilla de 0,15°. No es ERA5, así que sus milímetros no se comparan con el mapa anterior.
+        Las horas de los focos se pasan de UTC a hora de Lima (UTC−5). El 21 de octubre está incompleto.</p></div>
+      <div><h3>Imagen Sentinel-2</h3><p>Sentinel-2 L2A de Planetary Computer, escenas del 1 de septiembre al 20 de octubre de 2026 con menos de 60 % de nubes.
+        Se quitan nubes, sombras y nieve con la capa SCL y se toma la mediana de cada banda, a ~220 m por píxel. Color real: B4-B3-B2. Falso color: B12-B8-B4.</p></div>
+      <div><h3>Relieve</h3><p>Copernicus DEM GLO-90 (90 m) de Planetary Computer, remuestreado a ~2 km para la lectura con el cursor.
+        La altitud de cada foco se toma del píxel de ~450 m más cercano. Las franjas comparan el área del distrito con la proporción de focos en cada rango de altitud.</p></div>
+      <div><h3>Herramientas</h3><p>Python (pandas, geopandas, rasterio, odc-stac) para descargar, cruzar y resumir. La página dibuja todo con SVG propio, sin mapas base externos.
+        El código está en el notebook <code>incendios_2026.ipynb</code>, y <code>clima.py</code> descarga la lluvia y <code>web/exportar_relieve.py</code> el relieve.</p></div>
+      <div><h3>Limitaciones</h3><p>Un foco de calor no es un incendio: un incendio grande produce muchos focos, y una quema agrícola también produce focos. Las nubes esconden el fuego,
+        así que en los días de lluvia faltan focos por partida doble. ERA5 es grueso (unos 27 km) y suaviza la lluvia de montaña. La correlación con la lluvia no prueba
+        causalidad, y siete días de lluvia son pocos para sacar conclusiones generales.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/*DATOS*/
+(function () {
+  const ANIOS = []; for (let a = 2012; a <= 2026; a++) ANIOS.push(a);
+  const CORR = 1.12, LAT0 = -11.6;
+  const K = Math.cos(LAT0 * Math.PI / 180);
+  const pts = DATOS.pts.map(p => ({ lon: p[0], lat: p[1], anio: p[2], dia: p[3], hora: p[4], frp: p[5] }));
+  const serie = Object.fromEntries(ANIOS.map(a => [a, 0]));
+  pts.forEach(p => serie[p.anio]++);
+  const hist = ANIOS.filter(a => a < 2026).map(a => serie[a]);
+  const prom = hist.reduce((s, v) => s + v, 0) / hist.length;
+  const maxPrev = Math.max(...hist), anioMax = ANIOS[hist.indexOf(maxPrev)];
+  const orden = [...ANIOS].sort((a, b) => serie[b] - serie[a]);
+  const acum = {};
+  ANIOS.forEach(a => {
+    const c = new Array(20).fill(0);
+    pts.forEach(p => { if (p.anio === a) c[p.dia - 1]++; });
+    for (let i = 1; i < 20; i++) c[i] += c[i - 1];
+    acum[a] = c;
+  });
+  const acumProm = acum[2012].map((_, i) => ANIOS.filter(a => a < 2026).reduce((s, a) => s + acum[a][i], 0) / hist.length);
+
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const fmt = (v, d = 0) => v.toLocaleString("es-PE", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+  /* ---------- mapa ---------- */
+  const svg = document.getElementById("mapa");
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  DATOS.rt.flat().forEach(([lon, lat]) => { const x = lon * K, y = -lat; minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); });
+  const pad = 0.06; minX -= pad; maxX += pad; minY -= pad; maxY += pad;
+  const W = 1000, H = W * (maxY - minY) / (maxX - minX);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H.toFixed(0)}`);
+  svg.style.aspectRatio = `${W} / ${H.toFixed(0)}`;
+  const px = lon => (lon * K - minX) / (maxX - minX) * W;
+  const py = lat => (-lat - minY) / (maxY - minY) * H;
+  const path = rings => rings.map(r => "M" + r.map(([x, y]) => px(x).toFixed(1) + "," + py(y).toFixed(1)).join("L") + "Z").join("");
+
+  const gBase = el("g", {}, svg);
+  DATOS.vecinos.forEach(v => {
+    el("path", { d: path(v.r), class: "vec" }, gBase);
+  });
+  const rtPath = el("path", { d: path(DATOS.rt), class: "rt" }, gBase);
+  const gGhost = el("g", {}, svg), gNow = el("g", {}, svg);
+
+  // escala: 20 km en grados de latitud (~111 km/°)
+  const kmPx = (20 / 111) / (maxY - minY) * H;
+  const escala = document.getElementById("escala");
+  function pintarEscala() { escala.style.width = (kmPx * svg.getBoundingClientRect().width / W).toFixed(0) + "px"; }
+  window.addEventListener("resize", pintarEscala);
+
+  const tip = document.getElementById("tip"), mapbox = document.querySelector(".mapbox");
+  function mostrarTip(e, p) {
+    const r = mapbox.getBoundingClientRect();
+    tip.hidden = false;
+    tip.textContent = `${p.dia} oct ${p.anio} · ${p.hora.slice(0, 2)}:${p.hora.slice(2)} UTC` + (p.frp != null ? ` · ${fmt(p.frp, 1)} MW` : "");
+    tip.style.left = (e.clientX - r.left) + "px"; tip.style.top = (e.clientY - r.top) + "px";
+  }
+
+  function colores() {
+    gBase.querySelectorAll(".vec").forEach(p => { p.setAttribute("fill", css("--land")); p.setAttribute("stroke", css("--line")); p.setAttribute("stroke-width", "1"); });
+    rtPath.setAttribute("fill", css("--land-rt")); rtPath.setAttribute("stroke", css("--ink")); rtPath.setAttribute("stroke-width", "2.2");
+  }
+
+  const previos = document.getElementById("previos"), pordia = document.getElementById("pordia");
+  function colorDia(d) {
+    // del dorado (1 oct) a la brasa (20 oct)
+    const t = (d - 1) / 19, a = [215, 154, 30], b = [176, 40, 12];
+    return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+  }
+  function dibujarPuntos(anio) {
+    gGhost.replaceChildren(); gNow.replaceChildren();
+    if (previos.checked) {
+      const ghost = css("--ghost");
+      pts.forEach(p => { if (p.anio < anio) el("circle", { cx: px(p.lon).toFixed(1), cy: py(p.lat).toFixed(1), r: 2.6, fill: ghost, "fill-opacity": .35 }, gGhost); });
+    }
+    const base = anio === 2026 ? css("--ember") : css("--gold");
+    const borde = css("--panel");
+    pts.forEach(p => {
+      if (p.anio !== anio) return;
+      const c = el("circle", { cx: px(p.lon).toFixed(1), cy: py(p.lat).toFixed(1), r: 5.2, fill: pordia.checked ? colorDia(p.dia) : base, stroke: borde, "stroke-width": 1 }, gNow);
+      c.addEventListener("mouseenter", e => mostrarTip(e, p));
+      c.addEventListener("mousemove", e => mostrarTip(e, p));
+      c.addEventListener("mouseleave", () => { tip.hidden = true; });
+    });
+  }
+
+  /* ---------- ficha ---------- */
+  function ficha(anio) {
+    const n = serie[anio];
+    document.getElementById("mapyear").textContent = anio;
+    document.getElementById("fuente").textContent = `1–20 de octubre de ${anio} · ${anio === 2026 ? "INPE" : "NASA FIRMS"}`;
+    document.getElementById("n").innerHTML = `${fmt(n)}<small>focos</small>`;
+    document.getElementById("prom").textContent = fmt(prom);
+    document.getElementById("veces").textContent = fmt(n / prom, 1) + "×";
+    const ld = Math.log1p(n) - Math.log1p(prom);
+    document.getElementById("logd").textContent = (ld >= 0 ? "+" : "−") + fmt(Math.abs(ld), 2);
+    document.getElementById("puesto").textContent = orden.indexOf(anio) + 1;
+    const chip = document.getElementById("chip");
+    const record = orden[0] === anio;
+    chip.className = "chip " + (record ? "rec" : n > prom ? "up" : "down");
+    chip.textContent = record ? "el peor octubre desde 2012" : n > prom ? "sobre su promedio" : "bajo su promedio";
+    document.getElementById("nota").textContent = anio === 2026
+      ? `Corregido por la diferencia INPE–FIRMS (−12 %): ~${fmt(n / CORR)} focos, aún sobre el máximo previo de ${maxPrev} (${anioMax}).`
+      : anio === anioMax ? "Máximo de la serie 2012–2025." : "";
+  }
+
+  /* ---------- barras ---------- */
+  const barras = document.getElementById("barras");
+  function dibujarBarras(anio) {
+    barras.replaceChildren();
+    const L = 34, R = 8, T = 14, B = 26, w = 560 - L - R, h = 220 - T - B;
+    const top = 350, y = v => T + h - v / top * h, bw = w / ANIOS.length;
+    [0, 100, 200, 300].forEach(v => {
+      el("line", { x1: L, x2: L + w, y1: y(v), y2: y(v), stroke: css("--line"), "stroke-width": 1 }, barras);
+      el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, barras).textContent = v;
+    });
+    ANIOS.forEach((a, i) => {
+      const x = L + i * bw + 3, sel = a === anio;
+      const r = el("rect", { x, y: y(serie[a]), width: bw - 6, height: h - (y(serie[a]) - T), rx: 2, class: "bar",
+        fill: sel ? (a === 2026 ? css("--ember") : css("--gold")) : a === 2026 ? css("--ember-soft") : css("--ghost"), tabindex: 0, role: "button", "aria-label": `${a}: ${serie[a]} focos` }, barras);
+      r.addEventListener("click", () => ir(a));
+      r.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ir(a); } });
+      el("text", { x: x + (bw - 6) / 2, y: 220 - 8, "text-anchor": "middle", style: sel ? `fill:${css("--ink")};font-weight:500` : "" }, barras).textContent = "'" + String(a).slice(2);
+      if (sel) el("text", { x: x + (bw - 6) / 2, y: y(serie[a]) - 5, "text-anchor": "middle", style: `fill:${css("--ink")}` }, barras).textContent = serie[a];
+    });
+    el("line", { x1: L, x2: L + w, y1: y(prom), y2: y(prom), stroke: css("--avg"), "stroke-width": 1.2, "stroke-dasharray": "5 4" }, barras);
+    const xc = L + 14 * bw + 3;
+    el("line", { x1: xc - 3, x2: xc + bw - 3, y1: y(serie[2026] / CORR), y2: y(serie[2026] / CORR), stroke: css("--ink"), "stroke-width": 2 }, barras);
+  }
+
+  /* ---------- acumulado ---------- */
+  const ac = document.getElementById("acum");
+  function dibujarAcum(anio) {
+    ac.replaceChildren();
+    const L = 34, R = 56, T = 12, B = 26, w = 460 - L - R, h = 220 - T - B, top = 350;
+    const x = d => L + (d - 1) / 19 * w, y = v => T + h - v / top * h;
+    [0, 100, 200, 300].forEach(v => {
+      el("line", { x1: L, x2: L + w, y1: y(v), y2: y(v), stroke: css("--line") }, ac);
+      el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, ac).textContent = v;
+    });
+    [1, 5, 10, 15, 20].forEach(d => { el("text", { x: x(d), y: 220 - 8, "text-anchor": "middle" }, ac).textContent = d; });
+    const linea = (arr, color, ancho, dash, etiqueta) => {
+      el("path", { d: arr.map((v, i) => (i ? "L" : "M") + x(i + 1).toFixed(1) + "," + y(v).toFixed(1)).join(""), fill: "none", stroke: color, "stroke-width": ancho, "stroke-dasharray": dash || "" }, ac);
+      el("text", { x: x(20) + 6, y: y(arr[19]) + 4, style: `fill:${color}` }, ac).textContent = etiqueta;
+    };
+    linea(acumProm, css("--avg"), 1.4, "5 4", "prom.");
+    if (anio !== 2020) linea(acum[2020], css("--ghost"), 1.6, "", "2020");
+    linea(acum[anio], anio === 2026 ? css("--ember") : css("--gold"), 2.6, "", String(anio));
+    // 4 de octubre: despegue de 2026
+    el("line", { x1: x(4), x2: x(4), y1: T, y2: T + h, stroke: css("--line"), "stroke-dasharray": "2 3" }, ac);
+    el("text", { x: x(4) + 4, y: T + 10 }, ac).textContent = "4 oct";
+  }
+
+  /* ---------- estado ---------- */
+  const slider = document.getElementById("anio");
+  let anioActual = 2026;
+  function ir(a) {
+    anioActual = a; slider.value = a;
+    dibujarPuntos(a); ficha(a); dibujarBarras(a); dibujarAcum(a);
+  }
+  function todo() { colores(); ir(anioActual); pintarEscala(); }
+  slider.addEventListener("input", () => { parar(); ir(+slider.value); });
+  previos.addEventListener("change", () => dibujarPuntos(anioActual));
+  pordia.addEventListener("change", () => dibujarPuntos(anioActual));
+
+  const play = document.getElementById("play");
+  let timer = null;
+  function parar() { if (timer) { clearInterval(timer); timer = null; } play.textContent = "▶ Reproducir"; play.setAttribute("aria-pressed", "false"); }
+  play.addEventListener("click", () => {
+    if (timer) return parar();
+    play.textContent = "❚❚ Pausa"; play.setAttribute("aria-pressed", "true");
+    if (anioActual === 2026) ir(2012);
+    timer = setInterval(() => { if (anioActual >= 2026) return parar(); ir(anioActual + 1); }, 1100);
+  });
+
+  // al cambiar el tema, repintar con los nuevos tokens
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", todo);
+  new MutationObserver(todo).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  todo();
+})();
+</script>
+<script>
+/*CLIMA*/
+/*RELIEVE*/
+/*S2*/
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const fmt = (v, d = 0) => v.toLocaleString("es-PE", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const mezcla = (a, b, t) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",")})`; };
+  const ANIOS = []; for (let a = 2012; a <= 2026; a++) ANIOS.push(a);
+
+  /* proyección común al mapa principal */
+  const K = Math.cos(-11.6 * Math.PI / 180);
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  DATOS.rt.flat().forEach(([lon, lat]) => { const x = lon * K, y = -lat; minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); });
+  minX -= .06; maxX += .06; minY -= .06; maxY += .06;
+  const W = 1000, H = W * (maxY - minY) / (maxX - minX);
+  const px = lon => (lon * K - minX) / (maxX - minX) * W, py = lat => (-lat - minY) / (maxY - minY) * H;
+  const path = rings => rings.map(r => "M" + r.map(([x, y]) => px(x).toFixed(1) + "," + py(y).toFixed(1)).join("L") + "Z").join("");
+
+  function base(svg, id) {
+    svg.setAttribute("viewBox", `0 0 ${W} ${H.toFixed(0)}`); svg.style.aspectRatio = `${W} / ${H.toFixed(0)}`;
+    const defs = el("defs", {}, svg), cp = el("clipPath", { id }, defs);
+    el("path", { d: path(DATOS.rt) }, cp);
+    const g = { vec: el("g", {}, svg), celdas: el("g", { "clip-path": `url(#${id})` }, svg) };
+    DATOS.vecinos.forEach(v => el("path", { d: path(v.r), class: "vec" }, g.vec));
+    g.borde = el("path", { d: path(DATOS.rt), fill: "none" }, svg);
+    g.puntos = el("g", {}, svg); g.extra = el("g", {}, svg);
+    return g;
+  }
+  function pintarBase(g) {
+    g.vec.querySelectorAll("path").forEach(p => { p.setAttribute("fill", css("--land")); p.setAttribute("stroke", css("--line")); });
+    g.borde.setAttribute("stroke", css("--ink")); g.borde.setAttribute("stroke-width", "2.2");
+  }
+  function tipEn(tip, box, e, txt) {
+    const r = box.getBoundingClientRect(); tip.hidden = false; tip.textContent = txt;
+    tip.style.left = (e.clientX - r.left) + "px"; tip.style.top = (e.clientY - r.top) + "px";
+  }
+  function leyenda(div, lo, hi, a, b, unidad) {
+    div.innerHTML = `<span>${a}</span><i style="background:linear-gradient(90deg,${lo},${hi})"></i><span>${b} ${unidad}</span>`;
+  }
+  const pearson = (x, y) => {
+    const n = x.length, mx = x.reduce((s, v) => s + v, 0) / n, my = y.reduce((s, v) => s + v, 0) / n;
+    let sxy = 0, sxx = 0, syy = 0; for (let i = 0; i < n; i++) { sxy += (x[i] - mx) * (y[i] - my); sxx += (x[i] - mx) ** 2; syy += (y[i] - my) ** 2; }
+    return sxy / Math.sqrt(sxx * syy);
+  };
+
+  /* ================= LLUVIA ================= */
+  const L = CLIMA.lluvia;
+  const focos15 = Object.fromEntries(ANIOS.map(a => [a, 0]));
+  DATOS.pts.forEach(p => { if (p[3] <= 15) focos15[p[2]]++; });
+  const mmMedio = Object.fromEntries(ANIOS.map(a => [a, L.mm[a].reduce((s, v) => s + v, 0) / L.mm[a].length]));
+  // tope de la escala: percentil 95 de todas las celdas y años (unas pocas celdas extremas aplastarían el resto)
+  const todos = ANIOS.flatMap(a => L.mm[a]).sort((a, b) => a - b);
+  const mmMax = todos[Math.floor(todos.length * 0.95)];
+  const promLl = ANIOS.filter(a => a < 2026).reduce((s, a) => s + mmMedio[a], 0) / 14;
+  const secos = [...ANIOS].sort((a, b) => mmMedio[a] - mmMedio[b]);
+  const rLl = pearson(ANIOS.map(a => mmMedio[a]), ANIOS.map(a => Math.log1p(focos15[a])));
+  document.getElementById("ll-resumen").textContent =
+    `2026 es el octubre más seco de la serie (${fmt(mmMedio[2026])} mm) y el de más focos. En los 15 años, la correlación entre lluvia y log(1 + focos) es ${fmt(rLl, 2)}.`;
+
+  const llSvg = document.getElementById("ll-mapa"), llBox = llSvg.parentElement, llTip = document.getElementById("ll-tip");
+  const gL = base(llSvg, "clipLl");
+  const s = L.paso / 2;
+  const rects = L.celdas.map(([lon, lat], i) => {
+    const x = px(lon - s), y = py(lat + s), w = px(lon + s) - x, h = py(lat - s) - y;
+    const r = el("rect", { x: x.toFixed(1), y: y.toFixed(1), width: w.toFixed(1), height: h.toFixed(1) }, gL.celdas);
+    r.addEventListener("mousemove", e => tipEn(llTip, llBox, e, `${fmt(L.mm[anioLl][i], 1)} mm · celda ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`));
+    r.addEventListener("mouseleave", () => { llTip.hidden = true; });
+    return r;
+  });
+  let anioLl = 2026;
+  function dibujarLl() {
+    const lo = css("--rain-lo"), hi = css("--rain-hi");
+    rects.forEach((r, i) => r.setAttribute("fill", mezcla(lo, hi, Math.min(1, L.mm[anioLl][i] / mmMax))));
+    gL.puntos.replaceChildren();
+    DATOS.pts.forEach(p => {
+      if (p[2] !== anioLl || p[3] > 15) return;
+      const c = el("circle", { cx: px(p[0]).toFixed(1), cy: py(p[1]).toFixed(1), r: 5, fill: css("--ember"), stroke: css("--panel"), "stroke-width": 1 }, gL.puntos);
+      c.addEventListener("mousemove", e => tipEn(llTip, llBox, e, `foco · ${p[3]} oct ${p[2]}`));
+      c.addEventListener("mouseleave", () => { llTip.hidden = true; });
+    });
+    document.getElementById("ll-year").textContent = anioLl;
+    document.getElementById("ll-titulo").textContent = `1–15 de octubre de ${anioLl}`;
+    document.getElementById("ll-mm").innerHTML = `${fmt(mmMedio[anioLl])}<small>mm, media del distrito</small>`;
+    document.getElementById("ll-prom").textContent = fmt(promLl) + " mm";
+    document.getElementById("ll-focos").textContent = focos15[anioLl];
+    const rk = secos.indexOf(anioLl) + 1;
+    document.getElementById("ll-rank").textContent = `${rk} de 15`;
+    const chip = document.getElementById("ll-chip");
+    chip.className = "chip " + (rk === 1 ? "rec" : mmMedio[anioLl] < promLl ? "up" : "down");
+    chip.textContent = rk === 1 ? "el octubre más seco desde 2012" : mmMedio[anioLl] < promLl ? "más seco que el promedio" : "más lluvioso que el promedio";
+    leyenda(document.getElementById("ll-leyenda"), lo, hi, "0", "≥ " + fmt(mmMax), "mm");
+    dibujarDisp();
+  }
+  function dibujarDisp() {
+    const sv = document.getElementById("ll-disp"); sv.replaceChildren();
+    const Lm = 34, R = 10, T = 18, B = 30, w = 300 - Lm - R, h = 220 - T - B;
+    const x = v => Lm + (v - 70) / (175 - 70) * w, y = v => T + h - Math.log1p(v) / Math.log1p(320) * h;
+    [10, 30, 100, 300].forEach(v => { el("line", { x1: Lm, x2: Lm + w, y1: y(v), y2: y(v), stroke: css("--line") }, sv); el("text", { x: Lm - 5, y: y(v) + 4, "text-anchor": "end" }, sv).textContent = v; });
+    [80, 100, 120, 140, 160].forEach(v => el("text", { x: x(v), y: 220 - 14, "text-anchor": "middle" }, sv).textContent = v);
+    el("text", { x: Lm + w / 2, y: 218, "text-anchor": "middle" }, sv).textContent = "lluvia (mm) → · focos ↑ (log)";
+    ANIOS.forEach(a => {
+      const sel = a === anioLl;
+      const c = el("circle", { cx: x(mmMedio[a]), cy: y(focos15[a]), r: sel ? 7 : 5, fill: a === 2026 ? css("--ember") : sel ? css("--gold") : css("--ghost"),
+        stroke: sel ? css("--ink") : "none", "stroke-width": 1.5, class: "bar", tabindex: 0, role: "button", "aria-label": `${a}: ${fmt(mmMedio[a])} mm, ${focos15[a]} focos` }, sv);
+      c.addEventListener("click", () => irLl(a));
+      c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); irLl(a); } });
+      if (sel || a === 2026) el("text", { x: x(mmMedio[a]) + 9, y: y(focos15[a]) + 4, style: `fill:${css("--ink")}` }, sv).textContent = a;
+    });
+    document.getElementById("ll-corr").textContent = `Correlación lluvia vs log(1 + focos): ${fmt(rLl, 2)} (15 años). Haz clic en un punto para ver ese año.`;
+  }
+  const llSlider = document.getElementById("ll-anio"), llPlay = document.getElementById("ll-play");
+  let llTimer = null;
+  function irLl(a) { anioLl = a; llSlider.value = a; dibujarLl(); }
+  function pararLl() { if (llTimer) { clearInterval(llTimer); llTimer = null; } llPlay.textContent = "▶ Reproducir"; llPlay.setAttribute("aria-pressed", "false"); }
+  llSlider.addEventListener("input", () => { pararLl(); irLl(+llSlider.value); });
+  llPlay.addEventListener("click", () => {
+    if (llTimer) return pararLl();
+    llPlay.textContent = "❚❚ Pausa"; llPlay.setAttribute("aria-pressed", "true");
+    if (anioLl === 2026) irLl(2012);
+    llTimer = setInterval(() => { if (anioLl >= 2026) return pararLl(); irLl(anioLl + 1); }, 1100);
+  });
+
+  /* ================= LLUVIA, ÚLTIMOS 7 DÍAS ================= */
+  const P = CLIMA.lluvia7;
+  const dias = [...new Set(P.horas.map(h => h.slice(0, 10)))];
+  // lluvia diaria por celda: suma de las 24 horas de cada día
+  const ppDia = P.pp.map(serie => dias.map(d => P.horas.reduce((s, h, k) => s + (h.startsWith(d) ? (serie[k] || 0) : 0), 0)));
+  const ppTotal = ppDia.map(c => c.reduce((s, v) => s + v, 0));
+  const focos7 = CLIMA.focos7.map(f => ({ lon: f[0], lat: f[1], t: f[2], dia: f[2].slice(0, 10), frp: f[3] }));
+  const media = arr => arr.reduce((s, v) => s + v, 0) / arr.length;
+  const resumenDia = dias.map((d, k) => ({ dia: d, focos: focos7.filter(f => f.dia === d).length, pp: media(ppDia.map(c => c[k])) }));
+  const completos = resumenDia.slice(0, -1);   // el último día está incompleto
+  const rPp = pearson(completos.map(d => d.pp), completos.map(d => Math.log1p(d.focos)));
+  const fmtDia = d => `${+d.slice(8)} oct`;
+
+  const diasDiv = document.getElementById("l7-dias");
+  let sel = "todos";
+  const opciones = ["todos", ...dias];
+  const botones = opciones.map(o => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "dia";
+    b.textContent = o === "todos" ? "7 días" : fmtDia(o);
+    b.addEventListener("click", () => { sel = o; dibujarL7(); }); diasDiv.appendChild(b); return b;
+  });
+
+  const l7Svg = document.getElementById("l7-mapa"), l7Box = l7Svg.parentElement, l7Tip = document.getElementById("l7-tip");
+  const g7 = base(l7Svg, "clipL7");
+  const s7 = P.paso / 2;
+  const valor = c => sel === "todos" ? ppTotal[c] : ppDia[c][dias.indexOf(sel)];
+  const rects7 = P.celdas.map(([lon, lat], c) => {
+    const x = px(lon - s7), y = py(lat + s7);
+    const r = el("rect", { x: x.toFixed(1), y: y.toFixed(1), width: (px(lon + s7) - x).toFixed(1), height: (py(lat - s7) - y).toFixed(1) }, g7.celdas);
+    r.addEventListener("mousemove", e => tipEn(l7Tip, l7Box, e, `${fmt(valor(c), 1)} mm · celda ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`));
+    r.addEventListener("mouseleave", () => { l7Tip.hidden = true; });
+    return r;
+  });
+  const topeDia = Math.max(...ppDia.flat()), topeTotal = Math.max(...ppTotal);
+
+  function dibujarL7() {
+    botones.forEach((b, k) => b.setAttribute("aria-pressed", opciones[k] === sel ? "true" : "false"));
+    const lo = css("--rain-lo"), hi = css("--rain-hi"), tope = sel === "todos" ? topeTotal : topeDia;
+    rects7.forEach((r, c) => r.setAttribute("fill", mezcla(lo, hi, Math.min(1, valor(c) / tope))));
+    g7.puntos.replaceChildren();
+    focos7.filter(f => sel === "todos" || f.dia === sel).forEach(f => {
+      const c = el("circle", { cx: px(f.lon).toFixed(1), cy: py(f.lat).toFixed(1), r: 5, fill: css("--ember"), stroke: css("--panel"), "stroke-width": 1 }, g7.puntos);
+      c.addEventListener("mousemove", e => tipEn(l7Tip, l7Box, e, `foco · ${f.t.replace("T", " ")} h Lima · ${fmt(f.frp, 1)} MW`));
+      c.addEventListener("mouseleave", () => { l7Tip.hidden = true; });
+    });
+    const n = sel === "todos" ? focos7.length : resumenDia.find(d => d.dia === sel).focos;
+    const mm = media(P.celdas.map((_, c) => valor(c)));
+    const humedas = P.celdas.filter((_, c) => valor(c) >= 1).length;
+    document.getElementById("l7-fecha").textContent = sel === "todos" ? `${fmtDia(dias[0])} – ${fmtDia(dias[dias.length - 1])}` : fmtDia(sel);
+    document.getElementById("l7-titulo").textContent = sel === "todos" ? `${fmtDia(dias[0])} al ${fmtDia(dias[dias.length - 1])} de 2026` : `${fmtDia(sel)} de 2026`;
+    document.getElementById("l7-mm").innerHTML = `${fmt(mm, 1)}<small>mm, media del distrito</small>`;
+    document.getElementById("l7-max").textContent = fmt(Math.max(...P.celdas.map((_, c) => valor(c))), 1) + " mm";
+    document.getElementById("l7-humedas").textContent = `${humedas} de ${P.celdas.length}`;
+    document.getElementById("l7-focos").textContent = n;
+    leyenda(document.getElementById("l7-leyenda"), lo, hi, "0", fmt(tope), "mm");
+    dibujarSerie7();
+  }
+  function dibujarSerie7() {
+    const sv = document.getElementById("l7-serie"); sv.replaceChildren();
+    const Lm = 28, R = 30, T = 12, B = 22, w = 300 - Lm - R, h = 200 - T - B, n = resumenDia.length, bw = w / n;
+    const fMax = Math.max(40, ...resumenDia.map(d => d.focos)), pMax = Math.max(...resumenDia.map(d => d.pp)) * 1.15;
+    const yf = v => T + h - v / fMax * h, yp = v => T + h - v / pMax * h;
+    [0, 20, 40].forEach(v => { el("line", { x1: Lm, x2: Lm + w, y1: yf(v), y2: yf(v), stroke: css("--line") }, sv); el("text", { x: Lm - 4, y: yf(v) + 4, "text-anchor": "end" }, sv).textContent = v; });
+    resumenDia.forEach((d, k) => {
+      const x = Lm + k * bw + 3, on = d.dia === sel;
+      const r = el("rect", { x, y: yf(d.focos), width: bw - 6, height: T + h - yf(d.focos), rx: 2, fill: on || sel === "todos" ? css("--ember") : css("--ember-soft"), class: "bar" }, sv);
+      r.addEventListener("click", () => { sel = d.dia; dibujarL7(); });
+      el("text", { x: x + (bw - 6) / 2, y: 200 - 6, "text-anchor": "middle", style: on ? `fill:${css("--ink")}` : "" }, sv).textContent = d.dia.slice(8);
+    });
+    const pts = resumenDia.map((d, k) => [Lm + k * bw + bw / 2, yp(d.pp)]);
+    el("path", { d: pts.map((p, k) => (k ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(""), fill: "none", stroke: css("--rain-hi"), "stroke-width": 2 }, sv);
+    pts.forEach(p => el("circle", { cx: p[0], cy: p[1], r: 3, fill: css("--rain-hi") }, sv));
+    el("text", { x: Lm + w + 4, y: pts[pts.length - 1][1] + 4, style: `fill:${css("--rain-hi")}` }, sv).textContent = "mm";
+    const mediana = [...completos.map(d => d.pp)].sort((x, y) => x - y)[Math.floor(completos.length / 2)];
+    const seco = completos.filter(d => d.pp < mediana), mojado = completos.filter(d => d.pp >= mediana);
+    document.getElementById("l7-nota").textContent =
+      `Barras: focos por día. Línea: lluvia media del distrito. En los ${completos.length} días completos, los ${seco.length} más secos (menos de ${fmt(mediana, 1)} mm) promedian ` +
+      `${fmt(media(seco.map(d => d.focos)), 1)} focos y los ${mojado.length} más lluviosos, ${fmt(media(mojado.map(d => d.focos)), 1)}. ` +
+      `Correlación lluvia vs log(1 + focos): ${fmt(rPp, 2)}. Son pocos días, y la lluvia también trae nubes que tapan al satélite.`;
+  }
+
+  /* ================= RELIEVE, ÚLTIMOS 7 DÍAS ================= */
+  const RZ = RELIEVE, rj = RZ.rejilla;
+  const focosR = focos7.map((f, k) => ({ ...f, z: RZ.focos_z[k] }));
+  const rlSvg = document.getElementById("rl-mapa"), rlBox = rlSvg.parentElement, rlTip = document.getElementById("rl-tip");
+  const gR = base(rlSvg, "clipRl");
+  const [bx0, by0, bx1, by1] = RZ.bbox;
+  const [sx0, sy0, sx1, sy1] = S2.bbox;
+  const imgS2 = el("image", { href: S2.real, x: px(sx0), y: py(sy1), width: px(sx1) - px(sx0), height: py(sy0) - py(sy1), preserveAspectRatio: "none" }, gR.celdas);
+  // lluvia del día encima de la imagen, como celdas azules semitransparentes
+  const gLluviaR = el("g", { "clip-path": "url(#clipRl)" }, rlSvg);
+  rlSvg.insertBefore(gLluviaR, gR.borde);
+  const rectsR = P.celdas.map(([lon, lat]) => {
+    const x = px(lon - s7), y = py(lat + s7);
+    return el("rect", { x: x.toFixed(1), y: y.toFixed(1), width: (px(lon + s7) - x).toFixed(1), height: (py(lat - s7) - y).toFixed(1) }, gLluviaR);
+  });
+  const celdaEn = (lon, lat) => P.celdas.findIndex(([cx, cy]) => Math.abs(cx - lon) <= s7 && Math.abs(cy - lat) <= s7);
+  const valorR = c => selR === "todos" ? ppTotal[c] : ppDia[c][dias.indexOf(selR)];
+  let vista = "real", verLluvia = true;
+  const altitud = (lon, lat) => {
+    const i = Math.round((rj.lat0 - lat) / rj.paso - 0.4), j = Math.round((lon - rj.lon0) / rj.paso - 0.4);
+    return rj.z[i] && rj.z[i][j] != null ? rj.z[i][j] : null;
+  };
+  rlSvg.addEventListener("mousemove", e => {
+    if (e.target.tagName === "circle") return;
+    const r = rlSvg.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W, sy = (e.clientY - r.top) / r.height * H;
+    const lon = (sx / W * (maxX - minX) + minX) / K, lat = -(sy / H * (maxY - minY) + minY), z = altitud(lon, lat);
+    if (z == null) { rlTip.hidden = true; return; }
+    const c = celdaEn(lon, lat);
+    tipEn(rlTip, rlBox, e, (c >= 0 ? `lluvia ${fmt(valorR(c), 1)} mm · ` : "") + `${fmt(z)} m s. n. m.`);
+  });
+  rlSvg.addEventListener("mouseleave", () => { rlTip.hidden = true; });
+
+  const BANDAS = [[0, 500], [500, 1000], [1000, 1500], [1500, 2000], [2000, 3000], [3000, 5000]];
+  const enBanda = (z, [a, b]) => z >= a && z < b;
+  const areaBanda = BANDAS.map(b => RZ.z_distrito.filter(z => enBanda(z, b)).length / RZ.z_distrito.length);
+
+  const rlDias = document.getElementById("rl-dias");
+  let selR = "todos";
+  const botonesR = opciones.map(o => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "dia";
+    b.textContent = o === "todos" ? "7 días" : fmtDia(o);
+    b.addEventListener("click", () => { selR = o; dibujarRl(); }); rlDias.appendChild(b); return b;
+  });
+  const bReal = document.getElementById("rl-real"), bFalso = document.getElementById("rl-falso");
+  const cambiarVista = v => { vista = v; bReal.setAttribute("aria-pressed", v === "real"); bFalso.setAttribute("aria-pressed", v === "falso"); dibujarRl(); };
+  bReal.addEventListener("click", () => cambiarVista("real"));
+  bFalso.addEventListener("click", () => cambiarVista("falso"));
+  document.getElementById("rl-lluvia").addEventListener("change", e => { verLluvia = e.target.checked; dibujarRl(); });
+  const mediana = arr => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
+
+  function dibujarRl() {
+    botonesR.forEach((b, k) => b.setAttribute("aria-pressed", opciones[k] === selR ? "true" : "false"));
+    const fs = focosR.filter(f => selR === "todos" || f.dia === selR);
+    imgS2.setAttribute("href", vista === "real" ? S2.real : S2.falso);
+    const tope = selR === "todos" ? topeTotal : topeDia, lo = css("--rain-lo"), hi = css("--rain-hi");
+    rectsR.forEach((r, c) => {
+      const v = Math.min(1, valorR(c) / tope);
+      r.setAttribute("fill", mezcla(lo, hi, v)); r.setAttribute("fill-opacity", verLluvia ? (0.15 + 0.6 * v).toFixed(2) : 0);
+      r.setAttribute("stroke", verLluvia ? "rgba(255,255,255,.35)" : "none"); r.setAttribute("stroke-width", 1);
+    });
+    gR.puntos.replaceChildren();
+    fs.forEach(f => {
+      const c = el("circle", { cx: px(f.lon).toFixed(1), cy: py(f.lat).toFixed(1), r: 5.5, fill: css("--ember"), stroke: "#ffffff", "stroke-width": 1.4 }, gR.puntos);
+      c.addEventListener("mousemove", e => tipEn(rlTip, rlBox, e, `foco · ${f.t.replace("T", " ")} h · ${fmt(f.z)} m s. n. m.`));
+      c.addEventListener("mouseleave", () => { rlTip.hidden = true; });
+    });
+    document.getElementById("rl-fecha").textContent = selR === "todos" ? `${fmtDia(dias[0])} – ${fmtDia(dias[dias.length - 1])}` : fmtDia(selR);
+    document.getElementById("rl-titulo").textContent = selR === "todos" ? `${fmtDia(dias[0])} al ${fmtDia(dias[dias.length - 1])} de 2026` : `${fmtDia(selR)} de 2026`;
+    const zs = fs.map(f => f.z);
+    document.getElementById("rl-med").innerHTML = zs.length ? `${fmt(mediana(zs))}<small>m, altitud mediana de los focos</small>` : `—<small>sin focos este día</small>`;
+    document.getElementById("rl-meddist").textContent = fmt(mediana(RZ.z_distrito)) + " m";
+    document.getElementById("rl-bajo").textContent = zs.length ? fmt(100 * zs.filter(z => z < 1000).length / zs.length) + " %" : "—";
+    document.getElementById("rl-bajodist").textContent = fmt(100 * RZ.z_distrito.filter(z => z < 1000).length / RZ.z_distrito.length) + " %";
+    document.getElementById("rl-focos").textContent = zs.length;
+    document.getElementById("rl-leyenda").innerHTML = verLluvia ? `<span>lluvia 0</span><i style="background:linear-gradient(90deg,${lo},${hi})"></i><span>${fmt(tope)} mm</span>` : "<span>Sentinel-2 L2A</span>";
+    const mm = media(P.celdas.map((_, c) => valorR(c)));
+    document.getElementById("rl-mm").textContent = fmt(mm, 1) + " mm";
+    dibujarBandas(zs);
+  }
+  function dibujarBandas(zs) {
+    const sv = document.getElementById("rl-bandas"); sv.replaceChildren();
+    const Lm = 78, R = 36, T = 8, filaH = 28, w = 300 - Lm - R;
+    const pf = BANDAS.map(b => zs.length ? zs.filter(z => enBanda(z, b)).length / zs.length : 0);
+    BANDAS.forEach((b, k) => {
+      const y = T + k * filaH;
+      el("text", { x: Lm - 6, y: y + 16, "text-anchor": "end" }, sv).textContent = b[1] === 5000 ? `> ${fmt(b[0])} m` : `${fmt(b[0])}–${fmt(b[1])}`;
+      el("rect", { x: Lm, y: y + 3, width: Math.max(1, areaBanda[k] * w), height: 9, rx: 1.5, fill: css("--ghost") }, sv);
+      el("rect", { x: Lm, y: y + 13, width: Math.max(pf[k] ? 1 : 0, pf[k] * w), height: 9, rx: 1.5, fill: css("--ember") }, sv);
+      el("text", { x: Lm + Math.max(areaBanda[k], pf[k]) * w + 4, y: y + 20 }, sv).textContent = pf[k] ? fmt(100 * pf[k]) + " %" : "";
+    });
+    document.getElementById("rl-nota").innerHTML =
+      `<span style="color:var(--muted)">■</span> % del área del distrito en cada franja de altitud · <span style="color:var(--ember)">■</span> % de los focos. ` +
+      `Si el fuego no dependiera del relieve, las dos barras serían parecidas.`;
+  }
+
+  {
+    const zs = focosR.map(f => f.z), bajo = zs.filter(z => z < 1000).length / zs.length;
+    const bajoD = RZ.z_distrito.filter(z => z < 1000).length / RZ.z_distrito.length;
+    document.getElementById("rl-resumen").textContent =
+      `El ${fmt(100 * bajo)} % de los focos de la semana está bajo 1 000 m, aunque solo el ${fmt(100 * bajoD)} % del distrito está a esa altura.`;
+  }
+  function todo() { pintarBase(gL); pintarBase(g7); pintarBase(gR); dibujarLl(); dibujarL7(); dibujarRl(); }
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", todo);
+  new MutationObserver(todo).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  todo();
+})();
+</script>
