@@ -1,16 +1,17 @@
 # %% [markdown]
-# # Incendios en el Perú 2026: ¿año récord? y el incendio de Río Tambo
+# # Río Tambo en llamas: ¿octubre de 2026 es el peor de su historia?
 #
-# **Pregunta (reto E).** ¿Fue octubre de 2026 un octubre récord de focos de calor en el Perú, y
-# en qué distritos fue peor que en sus propios octubres de 2012–2025? Para cumplir el mínimo, también **medimos el área quemada del incendio de
-# Río Tambo (Satipo, Junín) con dNBR de Sentinel-2**.
+# **Pregunta (reto E).** ¿Fue octubre de 2026 el peor octubre de focos de calor del **distrito de
+# Río Tambo (Satipo, Junín)** desde 2012? Y, para el mínimo de la tarea, ¿cuánto quemó su
+# incendio principal según el dNBR de Sentinel-2?
 #
 # Plan:
 # 1. Focos VIIRS S-NPP 2012–2025 (NASA FIRMS) y 2026 (INPE Queimadas, porque FIRMS aún no
 #    publica el archivo anual de 2026 sin clave).
 # 2. Calibrar INPE contra FIRMS en los días que ambos cubren.
-# 3. Comparar el 1–20 de octubre de cada año, en el Perú y en cada distrito contra sí mismo.
-# 4. Sentinel-2 L2A en la zona de Río Tambo: NBR, dNBR, máscara de nubes con SCL, hectáreas.
+# 3. Contar los focos de Río Tambo del 1 al 20 de octubre de cada año y comparar 2026 con su
+#    propia historia, en total y día a día.
+# 4. Sentinel-2 L2A en el incendio principal: NBR, dNBR, máscara de nubes con SCL, hectáreas.
 
 # %%
 import glob
@@ -88,119 +89,147 @@ print(f"\ntotal de los {len(dias)} días: INPE {calib.INPE.sum():,} vs FIRMS {ca
       f"-> diferencia {total_dif:+.1f} %")
 
 # %% [markdown]
-# ## 3 · ¿Octubre récord? Mismo mes, año a año
+# ## 3 · Río Tambo frente a sus propios octubres
 #
-# Comparamos siempre la **misma ventana: 1–20 de octubre** (2026 llega hasta el 20), el pico de
-# la temporada. Comparar años completos mezclaría temporadas distintas.
-
-# %%
-octubre = focos[(focos.fecha.str[5:7] == "10") & (focos.fecha.str[8:] <= CORTE[3:])].copy()
-oct_anio = octubre.groupby("anio").size()
-historia = oct_anio.loc[2012:2025]
-
-# INPE cuenta más que FIRMS (sección 2): versión de 2026 corregida por esa diferencia
-factor = 1 + total_dif / 100
-oct_corr = oct_anio[2026] / factor
-rk = oct_anio.rank(ascending=False).astype(int)
-
-fig, ax = plt.subplots(figsize=(8, 3.4))
-colores = ["#c1663f" if a == 2026 else "#9aa7b0" for a in oct_anio.index]
-ax.bar(oct_anio.index, oct_anio.values, color=colores)
-ax.scatter([2026], [oct_corr], marker="_", s=300, color="#3c4a52", zorder=3,
-           label=f"2026 corregido por calibración ({total_dif:+.0f} %)")
-ax.axhline(historia.mean(), color="#3c4a52", lw=1, ls="--")
-ax.text(2011.6, historia.mean() * 1.03, f"promedio 2012–2025: {historia.mean():,.0f}", fontsize=8)
-ax.set_title("Focos de calor VIIRS S-NPP en el Perú, 1–20 de octubre de cada año\n"
-             "2012–2025: NASA FIRMS · 2026: INPE Queimadas", fontsize=9.5)
-ax.set_ylabel("focos")
-ax.set_xticks(oct_anio.index, [str(a)[2:] for a in oct_anio.index])
-ax.legend(frameon=False, fontsize=8, loc="upper left")
-plt.tight_layout()
-plt.savefig(f"{FIG}/focos_octubre_por_anio.png", bbox_inches="tight")
-plt.show()
-
-print(oct_anio.to_string())
-print(f"\noctubre 2026: {oct_anio[2026]:,} focos ({100 * (oct_anio[2026] / historia.mean() - 1):+.0f} % "
-      f"frente al promedio) | puesto {rk[2026]} de {len(rk)} | máximo previo {historia.max():,} "
-      f"({historia.idxmax()})")
-print(f"corregido por calibración: {oct_corr:,.0f} -> "
-      f"{'sigue' if oct_corr > historia.max() else 'ya NO es'} récord")
-
-# %% [markdown]
-# ### Por distrito: cada distrito contra su propia historia
-#
-# La pregunta no es qué distrito tiene más focos (los grandes y amazónicos siempre ganan), sino
-# **si a cada distrito le fue peor que en sus propios octubres de 2012–2025**. Para cada uno:
-# promedio y máximo de sus octubres previos, y `log(1 + focos 2026) − log(1 + promedio)`
-# (+0,69 = el doble). Como en el monitor de referencia, si el promedio es muy bajo (< 10 focos)
-# la comparación no es confiable y se marca «n. d.».
+# Comparamos **el mismo distrito a través del tiempo** y siempre en **la misma ventana: del 1 al
+# 20 de octubre** (2026 llega hasta el 20), el pico de la temporada. Usamos los límites del INEI
+# para Río Tambo (Satipo, Junín) y contamos los focos S-NPP que caen dentro.
 
 # %%
 distritos = gpd.read_file("datos/distritos.geojson").to_crs(4326)
-distritos["ubigeo"] = distritos.IDDIST
-octubre = gpd.sjoin(octubre.drop(columns="NOMBDEP"),
-                    distritos[["ubigeo", "NOMBDIST", "NOMBPROV", "NOMBDEP", "geometry"]],
-                    predicate="within").drop(columns="index_right")
+rio_tambo = distritos[(distritos.NOMBDIST == "RIO TAMBO") & (distritos.NOMBPROV == "SATIPO")]
 
-MIN_PROM = 10
-tab = (octubre.groupby(["ubigeo", "anio"]).size().unstack(fill_value=0)
-       .reindex(index=distritos.ubigeo, columns=range(2012, 2027), fill_value=0))
-dist = distritos.set_index("ubigeo")[["NOMBDIST", "NOMBPROV", "NOMBDEP"]].copy()
-dist["oct_2026"] = tab[2026]
-dist["prom_2012_25"] = tab.loc[:, 2012:2025].mean(axis=1)
-dist["max_previo"] = tab.loc[:, 2012:2025].max(axis=1)
-dist["anio_max"] = tab.loc[:, 2012:2025].idxmax(axis=1)
-dist["log_dif"] = np.log1p(dist.oct_2026) - np.log1p(dist.prom_2012_25)
-dist["comparable"] = dist.prom_2012_25 >= MIN_PROM
-dist["record"] = dist.comparable & (dist.oct_2026 > dist.max_previo)
-dist["record_corregido"] = dist.comparable & (dist.oct_2026 / factor > dist.max_previo)
+octubre = focos[(focos.fecha.str[5:7] == "10") & (focos.fecha.str[8:] <= CORTE[3:])]
+rt = gpd.sjoin(octubre.drop(columns="NOMBDEP"), rio_tambo[["geometry"]],
+               predicate="within").drop(columns="index_right")
+rt["dia"] = rt.fecha.str[8:].astype(int)
 
-comp = dist[dist.comparable]
-print(f"distritos con historia suficiente (promedio ≥ {MIN_PROM}): {len(comp)} de {len(dist)}")
-print(f"  con más focos que su promedio : {(comp.log_dif > 0).sum()} ({(comp.log_dif > 0).mean():.0%})")
-print(f"  al menos el doble (log ≥ 0,69): {(comp.log_dif >= np.log(2)).sum()}")
-print(f"  récord propio                 : {comp.record.sum()} (corregido: {comp.record_corregido.sum()})")
-print(f"  mediana de log_dif            : {comp.log_dif.median():+.2f}")
-comp.sort_values("log_dif", ascending=False).head(15)
+serie = rt.groupby("anio").size().reindex(range(2012, 2027), fill_value=0)
+historia = serie.loc[2012:2025]
 
-# %%
-mapa = distritos.merge(dist.reset_index()[["ubigeo", "log_dif", "comparable", "record_corregido"]], on="ubigeo")
-fig, (izq, der) = plt.subplots(1, 2, figsize=(10, 6.5))
-mapa[~mapa.comparable].plot(color="#e8eaec", ax=izq, lw=0)
-mapa[mapa.comparable].plot(column="log_dif", cmap="RdBu_r", vmin=-1.5, vmax=1.5, ax=izq, lw=0,
-                           legend=True, legend_kwds={"label": "log(1 + oct 2026) − log(1 + promedio oct 2012–25)",
-                                                     "shrink": 0.6})
-izq.set_title("Cada distrito frente a sus propios octubres\n(gris = n. d., promedio < 10 focos)", fontsize=9.5)
-izq.axis("off")
-mapa.plot(color="#e8eaec", ax=der, lw=0)
-mapa[mapa.record_corregido].plot(color="#c1663f", ax=der, lw=0)
-der.set_title(f"Distritos con su octubre récord 2012–2026\n"
-              f"({mapa.record_corregido.sum()} tras corregir la calibración)", fontsize=9.5)
-der.axis("off")
-plt.tight_layout()
-plt.savefig(f"{FIG}/mapa_distritos.png", bbox_inches="tight")
-plt.show()
+# INPE cuenta más que FIRMS (sección 2): versión de 2026 corregida por esa diferencia
+factor = 1 + total_dif / 100
+corr_2026 = serie[2026] / factor
+rk = serie.rank(ascending=False, method="min").astype(int)
+log_dif = np.log1p(serie[2026]) - np.log1p(historia.mean())
 
-# %%
-# Río Tambo, el distrito del incendio que medimos abajo, en su propia serie de octubres
-rt_serie = tab.loc[dist.index[(dist.NOMBDIST == "RIO TAMBO") & (dist.NOMBPROV == "SATIPO")][0]]
-fig, ax = plt.subplots(figsize=(8, 2.8))
-ax.bar(rt_serie.index, rt_serie.values, color=["#c1663f" if a == 2026 else "#9aa7b0" for a in rt_serie.index])
-ax.set_title("Río Tambo (Satipo): focos del 1 al 20 de octubre de cada año", fontsize=9.5)
-ax.set_xticks(rt_serie.index, [str(a)[2:] for a in rt_serie.index])
+fig, ax = plt.subplots(figsize=(8, 3.4))
+ax.bar(serie.index, serie.values, color=["#c1663f" if a == 2026 else "#9aa7b0" for a in serie.index])
+ax.scatter([2026], [corr_2026], marker="_", s=300, color="#3c4a52", zorder=3,
+           label=f"2026 corregido por calibración ({total_dif:+.0f} %)")
+ax.axhline(historia.mean(), color="#3c4a52", lw=1, ls="--")
+ax.text(2011.6, historia.mean() * 1.05, f"promedio 2012–2025: {historia.mean():,.0f}", fontsize=8)
+ax.set_title("Río Tambo (Satipo, Junín): focos VIIRS S-NPP del 1 al 20 de octubre de cada año\n"
+             "2012–2025: NASA FIRMS · 2026: INPE Queimadas", fontsize=9.5)
+ax.set_ylabel("focos")
+ax.set_xticks(serie.index, [str(a)[2:] for a in serie.index])
+ax.legend(frameon=False, fontsize=8, loc="upper left")
 plt.tight_layout()
 plt.savefig(f"{FIG}/rio_tambo_octubres.png", bbox_inches="tight")
 plt.show()
-print(rt_serie.to_string())
+
+print(serie.to_string())
+print(f"\n2026: {serie[2026]} focos | promedio 2012–2025: {historia.mean():.0f} | "
+      f"log(1+2026) − log(1+promedio) = {log_dif:+.2f} (≈ {np.exp(log_dif):.1f} veces) | "
+      f"puesto {rk[2026]} de {len(rk)} | máximo previo {historia.max()} ({historia.idxmax()})")
+print(f"corregido por calibración: {corr_2026:.0f} -> "
+      f"{'sigue siendo' if corr_2026 > historia.max() else 'ya NO es'} récord")
+
+# %% [markdown]
+# ### ¿Cuándo se despegó 2026? Focos acumulados día a día en octubre
+#
+# El total esconde el ritmo. Acumulamos los focos día a día de cada octubre: si 2026 se separa
+# desde el inicio, es una temporada más intensa; si salta de golpe, es un evento puntual.
+
+# %%
+acum = (rt.groupby(["anio", "dia"]).size().unstack(fill_value=0)
+        .reindex(index=range(2012, 2027), columns=range(1, 21), fill_value=0).cumsum(axis=1))
+
+fig, ax = plt.subplots(figsize=(8, 3.6))
+for a in range(2012, 2026):
+    ax.plot(acum.columns, acum.loc[a], color="#9aa7b0", lw=0.8, alpha=0.7)
+ax.plot(acum.columns, acum.loc[2012:2025].mean(), color="#3c4a52", lw=1.4, ls="--",
+        label="promedio 2012–2025")
+ax.plot(acum.columns, acum.loc[historia.idxmax()], color="#6b8fb0", lw=1.4,
+        label=f"{historia.idxmax()} (máximo previo)")
+ax.plot(acum.columns, acum.loc[2026], color="#c1663f", lw=2.2, label="2026")
+ax.set_xlabel("día de octubre")
+ax.set_ylabel("focos acumulados")
+ax.set_title("Río Tambo: focos acumulados del 1 al 20 de octubre, cada año", fontsize=9.5)
+ax.legend(frameon=False, fontsize=8)
+plt.tight_layout()
+plt.savefig(f"{FIG}/rio_tambo_acumulado.png", bbox_inches="tight")
+plt.show()
+
+def desde(arriba):
+    """Primer día desde el cual 2026 ya no vuelve a quedar por debajo."""
+    abajo = arriba.index[~arriba.values]
+    return None if arriba.iloc[-1] == False else (abajo.max() + 1 if len(abajo) else 1)
+
+supera_prom = desde(acum.loc[2026] > acum.loc[2012:2025].mean())
+dia_max = desde(acum.loc[2026] > acum.loc[historia.idxmax()])
+print(f"2026 supera al promedio desde el {supera_prom} de octubre y a {historia.idxmax()} "
+      f"desde el {dia_max} de octubre" if dia_max else "2026 no supera al máximo previo")
+print(f"focos 2026 del 4 al 6 de octubre: {acum.loc[2026, 6] - acum.loc[2026, 3]} "
+      f"({(acum.loc[2026, 6] - acum.loc[2026, 3]) / serie[2026]:.0%} del total)")
+
+# %% [markdown]
+# ### El mapa año a año
+#
+# Cada cuadro es un octubre (1–20): los puntos son los focos de ese año dentro del distrito y la
+# barra de abajo va sumando la serie. Se guarda como `figuras/rio_tambo_octubres.gif`.
+
+# %%
+from matplotlib.animation import FuncAnimation, PillowWriter
+from IPython.display import Image
+
+geo = rio_tambo.to_crs(32718)
+rt_m = rt.to_crs(32718)
+xmin, ymin, xmax, ymax = geo.total_bounds
+
+fig = plt.figure(figsize=(6.4, 7.4))
+ax_mapa = fig.add_axes([0.03, 0.27, 0.94, 0.66])
+ax_barra = fig.add_axes([0.10, 0.06, 0.86, 0.16])
+
+def cuadro(i):
+    anio = 2012 + i
+    ax_mapa.clear()
+    geo.plot(ax=ax_mapa, color="#eef0e8", edgecolor="#3c4a52", lw=0.8)
+    previos = rt_m[rt_m.anio < anio]
+    ax_mapa.scatter(previos.geometry.x, previos.geometry.y, s=2, color="#9aa7b0", alpha=0.25)
+    este = rt_m[rt_m.anio == anio]
+    color = "#c1663f" if anio == 2026 else "#e0913c"
+    ax_mapa.scatter(este.geometry.x, este.geometry.y, s=9, color=color, edgecolors="white", lw=0.2)
+    ax_mapa.set_xlim(xmin - 3000, xmax + 3000); ax_mapa.set_ylim(ymin - 3000, ymax + 3000)
+    ax_mapa.set_aspect("equal"); ax_mapa.axis("off")
+    fuente = "INPE" if anio == 2026 else "FIRMS"
+    ax_mapa.set_title(f"Río Tambo · 1–20 de octubre de {anio}\n{serie[anio]} focos VIIRS S-NPP ({fuente})"
+                      + ("  ·  RÉCORD" if anio == 2026 and serie[2026] > historia.max() else ""),
+                      fontsize=11, color=color if anio == 2026 else "#3c4a52")
+    ax_barra.clear()
+    valores = [serie[a] if a <= anio else 0 for a in serie.index]
+    ax_barra.bar(serie.index, valores,
+                 color=["#c1663f" if a == anio else "#9aa7b0" for a in serie.index])
+    ax_barra.axhline(historia.mean(), color="#3c4a52", lw=0.8, ls="--")
+    ax_barra.set_ylim(0, serie.max() * 1.1)
+    ax_barra.set_xticks(serie.index, [str(a)[2:] for a in serie.index], fontsize=7)
+    ax_barra.tick_params(axis="y", labelsize=7)
+    ax_barra.set_ylabel("focos", fontsize=7)
+
+anim = FuncAnimation(fig, cuadro, frames=len(serie), interval=900)
+anim.save(f"{FIG}/rio_tambo_octubres.gif", writer=PillowWriter(fps=1.2), dpi=90)
+plt.close(fig)
+Image(filename=f"{FIG}/rio_tambo_octubres.gif")
 
 # %% [markdown]
 # **Robustez.** FIRMS marca algunos focos como fuentes fijas o volcanes (`type` 1–3). INPE no
-# los marca, así que no podemos quitarlos en 2026. ¿Cuánto pesan en la historia?
+# los marca, así que no podemos quitarlos en 2026. ¿Cuánto pesan en la historia de Río Tambo?
 
 # %%
-hist = octubre[octubre.fuente == "FIRMS"]
+hist = rt[rt.fuente == "FIRMS"]
 peso_fijas = 100 * (hist["type"] != 0).mean()   # ojo: hist.type es el tipo de geometría
-print(f"focos FIRMS de octubre 2012–2025 que no son vegetación (type≠0): {peso_fijas:.1f} %")
+print(f"focos FIRMS de octubre 2012–2025 en Río Tambo que no son vegetación (type≠0): {peso_fijas:.1f} %")
+
 
 # %% [markdown]
 # ## 4 · El incendio de Río Tambo con dNBR
@@ -214,8 +243,6 @@ print(f"focos FIRMS de octubre 2012–2025 que no son vegetación (type≠0): {p
 
 # %%
 BBOX = [-74.0, -12.0, -73.72, -11.74]
-rio_tambo = distritos[(distritos.NOMBDIST == "RIO TAMBO") & (distritos.NOMBPROV == "SATIPO")]
-
 f_zona = focos.cx[BBOX[0]:BBOX[2], BBOX[1]:BBOX[3]]
 f_zona = f_zona[f_zona.anio == 2026]
 print("focos 2026 en la zona, por día (sep–oct):")
@@ -364,16 +391,13 @@ plt.show()
 
 # %%
 hallazgos = [
-    f"1. Del 1 al 20 de octubre de 2026 hubo {oct_anio[2026]:,} focos VIIRS S-NPP en el Perú: "
-    f"{100 * (oct_anio[2026] / historia.mean() - 1):+.0f} % sobre el promedio 2012–2025 (puesto {rk[2026]} de {len(rk)}). "
-    f"Supera a {historia.idxmax()} ({historia.max():,}) en bruto, pero al corregir el {total_dif:+.1f} % de INPE frente "
-    f"a FIRMS queda en {oct_corr:,.0f}: {'récord' if oct_corr > historia.max() else 'empate técnico, no un récord claro'}.",
-    f"2. De {len(comp)} distritos con historia suficiente, {(comp.log_dif > 0).mean():.0%} tuvo más focos que su propio "
-    f"promedio de octubre y {(comp.log_dif >= np.log(2)).sum()} al menos el doble; {comp.record_corregido.sum()} "
-    f"batieron su récord propio aun tras la corrección: "
-    f"{', '.join(comp[comp.record_corregido].sort_values('log_dif', ascending=False).NOMBDIST.str.title())}.",
-    f"3. Río Tambo: {rt_serie[2026]} focos en octubre de 2026 frente a {rt_serie.loc[2012:2025].mean():.0f} de promedio "
-    f"(máximo previo {rt_serie.loc[2012:2025].max()}).",
+    f"1. Del 1 al 20 de octubre de 2026 Río Tambo tuvo {serie[2026]} focos VIIRS S-NPP, frente a un promedio de "
+    f"{historia.mean():.0f} en 2012–2025: ≈ {np.exp(log_dif):.1f} veces su promedio (log_dif {log_dif:+.2f}), puesto {rk[2026]} de {len(rk)}.",
+    f"2. El máximo previo fue {historia.max()} focos en {historia.idxmax()}. Aun corrigiendo el {total_dif:+.1f} % de INPE "
+    f"frente a FIRMS, 2026 queda en {corr_2026:.0f}: {'sigue siendo récord' if corr_2026 > historia.max() else 'ya no es récord'}.",
+    f"3. 2026 supera al promedio desde el {supera_prom} de octubre"
+    + (f" y a {historia.idxmax()} desde el {dia_max}" if dia_max else "") +
+    f"; entre el 4 y el 6 de octubre se concentró el {(acum.loc[2026, 6] - acum.loc[2026, 3]) / serie[2026]:.0%} de los focos.",
     f"4. Su incendio principal quemó {resumen.iloc[1]['≥0,27 (ha)']:,.0f} ha entre el {ANTES} y el {DESPUES} "
     f"(dNBR ≥ 0,27, sembrado con focos); al {DESPUES_2} van al menos {resumen.iloc[2]['≥0,27 (ha)']:,.0f} ha.",
 ]
