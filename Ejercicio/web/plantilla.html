@@ -236,10 +236,47 @@ footer b { color: var(--ink); font-weight: 600; }
     </div>
   </section>
 
+  <section class="bloque" id="relieve">
+    <header class="sec">
+      <div class="eyebrow">Relieve · Copernicus DEM · últimos 7 días</div>
+      <h2 class="h2big">El fuego baja a los valles</h2>
+      <p class="lede">Los mismos focos de la última semana, ahora sobre el relieve del distrito: valles verdes, laderas ocres y cumbres claras, con sombreado
+        desde el noroeste. Pasa el cursor sobre el mapa para leer la altitud. <b id="rl-resumen"></b></p>
+    </header>
+    <div class="controls">
+      <div class="dias" id="rl-dias" role="group" aria-label="Día"></div>
+    </div>
+    <div class="main">
+      <div class="mapbox">
+        <svg id="rl-mapa" role="img" aria-label="Mapa de relieve de Río Tambo con los focos de los últimos 7 días"></svg>
+        <div class="mapyear small" id="rl-fecha"></div>
+        <div class="legend" id="rl-leyenda"></div>
+        <div class="tip" id="rl-tip" hidden></div>
+      </div>
+      <aside class="side">
+        <div class="card">
+          <div class="eyebrow" id="rl-titulo"></div>
+          <div class="big" id="rl-med"><small>m</small></div>
+          <dl>
+            <dt>Altitud mediana del distrito</dt><dd id="rl-meddist"></dd>
+            <dt>Focos bajo 1 000 m</dt><dd id="rl-bajo"></dd>
+            <dt>Área del distrito bajo 1 000 m</dt><dd id="rl-bajodist"></dd>
+            <dt>Focos</dt><dd id="rl-focos"></dd>
+          </dl>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Altitud: área frente a focos</div>
+          <svg id="rl-bandas" viewBox="0 0 300 180" role="img" aria-label="Distribución de altitudes del distrito y de los focos"></svg>
+          <p class="note" id="rl-nota"></p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
   <section class="bloque metodo" id="metodologia">
     <h2 class="h2big">Metodología</h2>
     <div class="metgrid">
-      <div><h3>Pregunta</h3><p>¿Fue octubre de 2026 el peor octubre de focos de calor de Río Tambo (Satipo, Junín) desde 2012? ¿Qué papel juega la lluvia?</p></div>
+      <div><h3>Pregunta</h3><p>¿Fue octubre de 2026 el peor octubre de focos de calor de Río Tambo (Satipo, Junín) desde 2012? ¿Qué papel juegan la lluvia y el relieve?</p></div>
       <div><h3>Focos de calor</h3><p>Satélite VIIRS S-NPP, 375 m. 2012–2025: archivo anual de NASA FIRMS para el Perú. 2026: INPE Queimadas (NPP-375 y NPP-375D),
         porque FIRMS no publica sin clave el año en curso. Últimos 7 días: FIRMS «South America 7d». Se cuentan solo los focos dentro del límite INEI de Río Tambo.</p></div>
       <div><h3>Misma ventana cada año</h3><p>Focos del 1 al 20 de octubre (2026 llega hasta el 20). La comparación es del distrito consigo mismo:
@@ -252,8 +289,10 @@ footer b { color: var(--ink); font-weight: 600; }
       <div><h3>Lluvia de los últimos 7 días</h3><p>Open-Meteo, modelo de pronóstico y análisis (mejor modelo disponible), lluvia horaria sumada por día
         del 14 al 21 de octubre de 2026 (hora de Lima) en una rejilla de 0,15°. No es ERA5, así que sus milímetros no se comparan con el mapa anterior.
         Las horas de los focos se pasan de UTC a hora de Lima (UTC−5). El 21 de octubre está incompleto.</p></div>
+      <div><h3>Relieve</h3><p>Copernicus DEM GLO-90 (90 m) de Planetary Computer, remuestreado a ~450 m para la imagen y a ~2 km para la lectura con el cursor.
+        La altitud de cada foco se toma del píxel de ~450 m más cercano. Las franjas comparan el área del distrito con la proporción de focos en cada rango de altitud.</p></div>
       <div><h3>Herramientas</h3><p>Python (pandas, geopandas, rasterio, odc-stac) para descargar, cruzar y resumir. La página dibuja todo con SVG propio, sin mapas base externos.
-        El código está en el notebook <code>incendios_2026.ipynb</code>, y <code>clima.py</code> descarga la lluvia.</p></div>
+        El código está en el notebook <code>incendios_2026.ipynb</code>, y <code>clima.py</code> descarga la lluvia y <code>web/exportar_relieve.py</code> el relieve.</p></div>
       <div><h3>Limitaciones</h3><p>Un foco de calor no es un incendio: un incendio grande produce muchos focos, y una quema agrícola también produce focos. Las nubes esconden el fuego,
         así que en los días de lluvia faltan focos por partida doble. ERA5 es grueso (unos 27 km) y suaviza la lluvia de montaña. La correlación con la lluvia no prueba
         causalidad, y siete días de lluvia son pocos para sacar conclusiones generales.</p></div>
@@ -446,6 +485,7 @@ footer b { color: var(--ink); font-weight: 600; }
 </script>
 <script>
 /*CLIMA*/
+/*RELIEVE*/
 (function () {
   const NS = "http://www.w3.org/2000/svg";
   const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
@@ -649,7 +689,82 @@ footer b { color: var(--ink); font-weight: 600; }
       `Correlación lluvia vs log(1 + focos): ${fmt(rPp, 2)}. Son pocos días, y la lluvia también trae nubes que tapan al satélite.`;
   }
 
-  function todo() { pintarBase(gL); pintarBase(g7); dibujarLl(); dibujarL7(); }
+  /* ================= RELIEVE, ÚLTIMOS 7 DÍAS ================= */
+  const RZ = RELIEVE, rj = RZ.rejilla;
+  const focosR = focos7.map((f, k) => ({ ...f, z: RZ.focos_z[k] }));
+  const rlSvg = document.getElementById("rl-mapa"), rlBox = rlSvg.parentElement, rlTip = document.getElementById("rl-tip");
+  const gR = base(rlSvg, "clipRl");
+  const [bx0, by0, bx1, by1] = RZ.bbox;
+  el("image", { href: RZ.img, x: px(bx0), y: py(by1), width: px(bx1) - px(bx0), height: py(by0) - py(by1), preserveAspectRatio: "none" }, gR.celdas);
+  const altitud = (lon, lat) => {
+    const i = Math.round((rj.lat0 - lat) / rj.paso - 0.4), j = Math.round((lon - rj.lon0) / rj.paso - 0.4);
+    return rj.z[i] && rj.z[i][j] != null ? rj.z[i][j] : null;
+  };
+  rlSvg.addEventListener("mousemove", e => {
+    if (e.target.tagName === "circle") return;
+    const r = rlSvg.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W, sy = (e.clientY - r.top) / r.height * H;
+    const lon = (sx / W * (maxX - minX) + minX) / K, lat = -(sy / H * (maxY - minY) + minY), z = altitud(lon, lat);
+    if (z == null) { rlTip.hidden = true; return; }
+    tipEn(rlTip, rlBox, e, `${fmt(z)} m s. n. m. · ${lat.toFixed(2)}°, ${lon.toFixed(2)}°`);
+  });
+  rlSvg.addEventListener("mouseleave", () => { rlTip.hidden = true; });
+
+  const BANDAS = [[0, 500], [500, 1000], [1000, 1500], [1500, 2000], [2000, 3000], [3000, 5000]];
+  const enBanda = (z, [a, b]) => z >= a && z < b;
+  const areaBanda = BANDAS.map(b => RZ.z_distrito.filter(z => enBanda(z, b)).length / RZ.z_distrito.length);
+
+  const rlDias = document.getElementById("rl-dias");
+  let selR = "todos";
+  const botonesR = opciones.map(o => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "dia";
+    b.textContent = o === "todos" ? "7 días" : fmtDia(o);
+    b.addEventListener("click", () => { selR = o; dibujarRl(); }); rlDias.appendChild(b); return b;
+  });
+  const mediana = arr => { const s = [...arr].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
+
+  function dibujarRl() {
+    botonesR.forEach((b, k) => b.setAttribute("aria-pressed", opciones[k] === selR ? "true" : "false"));
+    const fs = focosR.filter(f => selR === "todos" || f.dia === selR);
+    gR.puntos.replaceChildren();
+    fs.forEach(f => {
+      const c = el("circle", { cx: px(f.lon).toFixed(1), cy: py(f.lat).toFixed(1), r: 5.5, fill: css("--ember"), stroke: "#ffffff", "stroke-width": 1.4 }, gR.puntos);
+      c.addEventListener("mousemove", e => tipEn(rlTip, rlBox, e, `foco · ${f.t.replace("T", " ")} h · ${fmt(f.z)} m s. n. m.`));
+      c.addEventListener("mouseleave", () => { rlTip.hidden = true; });
+    });
+    document.getElementById("rl-fecha").textContent = selR === "todos" ? `${fmtDia(dias[0])} – ${fmtDia(dias[dias.length - 1])}` : fmtDia(selR);
+    document.getElementById("rl-titulo").textContent = selR === "todos" ? `${fmtDia(dias[0])} al ${fmtDia(dias[dias.length - 1])} de 2026` : `${fmtDia(selR)} de 2026`;
+    const zs = fs.map(f => f.z);
+    document.getElementById("rl-med").innerHTML = zs.length ? `${fmt(mediana(zs))}<small>m, altitud mediana de los focos</small>` : `—<small>sin focos este día</small>`;
+    document.getElementById("rl-meddist").textContent = fmt(mediana(RZ.z_distrito)) + " m";
+    document.getElementById("rl-bajo").textContent = zs.length ? fmt(100 * zs.filter(z => z < 1000).length / zs.length) + " %" : "—";
+    document.getElementById("rl-bajodist").textContent = fmt(100 * RZ.z_distrito.filter(z => z < 1000).length / RZ.z_distrito.length) + " %";
+    document.getElementById("rl-focos").textContent = zs.length;
+    document.getElementById("rl-leyenda").innerHTML = `<span>200 m</span><i style="background:linear-gradient(90deg,#2f6b3a,#6f9a4a,#c7b56a,#a9784a,#7a5a44,#e9e4dc)"></i><span>4 000 m</span>`;
+    dibujarBandas(zs);
+  }
+  function dibujarBandas(zs) {
+    const sv = document.getElementById("rl-bandas"); sv.replaceChildren();
+    const Lm = 78, R = 36, T = 8, filaH = 28, w = 300 - Lm - R;
+    const pf = BANDAS.map(b => zs.length ? zs.filter(z => enBanda(z, b)).length / zs.length : 0);
+    BANDAS.forEach((b, k) => {
+      const y = T + k * filaH;
+      el("text", { x: Lm - 6, y: y + 16, "text-anchor": "end" }, sv).textContent = b[1] === 5000 ? `> ${fmt(b[0])} m` : `${fmt(b[0])}–${fmt(b[1])}`;
+      el("rect", { x: Lm, y: y + 3, width: Math.max(1, areaBanda[k] * w), height: 9, rx: 1.5, fill: css("--ghost") }, sv);
+      el("rect", { x: Lm, y: y + 13, width: Math.max(pf[k] ? 1 : 0, pf[k] * w), height: 9, rx: 1.5, fill: css("--ember") }, sv);
+      el("text", { x: Lm + Math.max(areaBanda[k], pf[k]) * w + 4, y: y + 20 }, sv).textContent = pf[k] ? fmt(100 * pf[k]) + " %" : "";
+    });
+    document.getElementById("rl-nota").innerHTML =
+      `<span style="color:var(--muted)">■</span> % del área del distrito en cada franja de altitud · <span style="color:var(--ember)">■</span> % de los focos. ` +
+      `Si el fuego no dependiera del relieve, las dos barras serían parecidas.`;
+  }
+
+  {
+    const zs = focosR.map(f => f.z), bajo = zs.filter(z => z < 1000).length / zs.length;
+    const bajoD = RZ.z_distrito.filter(z => z < 1000).length / RZ.z_distrito.length;
+    document.getElementById("rl-resumen").textContent =
+      `El ${fmt(100 * bajo)} % de los focos de la semana está bajo 1 000 m, aunque solo el ${fmt(100 * bajoD)} % del distrito está a esa altura.`;
+  }
+  function todo() { pintarBase(gL); pintarBase(g7); pintarBase(gR); dibujarLl(); dibujarL7(); dibujarRl(); }
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", todo);
   new MutationObserver(todo).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   todo();

@@ -88,7 +88,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 ## Mapa interactivo
 
-La página tiene tres mapas interactivos y una sección de metodología al final:
+La página tiene cuatro mapas interactivos y una sección de metodología al final:
 
 1. **Focos año a año** (1–20 de octubre, 2012–2026).
 2. **Lluvia y focos** (Open-Meteo, ERA5 de 0,25°, 1–15 de octubre de cada año). 2026 es el octubre más seco de
@@ -96,7 +96,10 @@ La página tiene tres mapas interactivos y una sección de metodología al final
 3. **Lluvia diaria y focos de los últimos 7 días** (lluvia horaria de Open-Meteo sumada por día, más focos FIRMS 7d),
    con un botón por día y otro para la semana completa. Los dos días más secos (14 y 15 de octubre, ~3 mm) tuvieron 31 y
    33 focos. Tras las lluvias del 16 al 18, los focos cayeron a cero el 17 y el 18.
+4. **Relieve y focos de los últimos 7 días** (Copernicus DEM de 90 m, sombreado y coloreado por altitud). El **98 %** de
+   los focos de la semana está bajo 1 000 m, aunque solo el 46 % del distrito está a esa altura. La altitud mediana de
+   los focos es 637 m y la del distrito, 1 101 m: el fuego se concentra en los valles.
 
-`clima.py` descarga la lluvia, y `web/exportar_clima.py` los prepara para la página.
+`clima.py` descarga la lluvia, `web/exportar_relieve.py` el relieve, y `web/exportar_clima.py` los prepara para la página.
 
 `web/index.html` es una página autónoma: ábrela en el navegador y recorre los octubres de 2012 a 2026 con el control de año o el botón «Reproducir». Se regenera con los datos de `web/datos.js` sobre `web/plantilla.html`.
