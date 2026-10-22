@@ -19,8 +19,7 @@ focos7 = [[round(r.longitude, 4), round(r.latitude, 4), r.local.strftime("%Y-%m-
 v = c["viento"]
 clima = {
     "lluvia": {"celdas": c["lluvia_celdas"], "paso": 0.25, "mm": c["lluvia"]},
-    "viento": {"celdas": c["viento_celdas"], "paso": 0.15, "horas": v["horas"],
-               "vel": v["vel"], "dir": v["dir"], "hr": v["hr"], "pp": v["pp"]},
+    "lluvia7": {"celdas": c["viento_celdas"], "paso": 0.15, "horas": v["horas"], "pp": v["pp"]},
     "focos7": focos7,
 }
 open("web/clima.js", "w").write("const CLIMA=" + json.dumps(clima, separators=(",", ":")) + ";")
