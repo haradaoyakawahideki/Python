@@ -1,0 +1,41 @@
+{
+  "titulo": "Río Tambo en llamas: el peor octubre desde 2012",
+  "fuente": "Ejercicio/README.md (NASA FIRMS, INPE, Sentinel-2, Open-Meteo)",
+  "escenas": [
+    {
+      "frase": "En Río Tambo, Satipo, Junín, del uno al veinte de octubre se detectaron trescientos treinta y cinco focos de calor. Es el peor octubre desde dos mil doce.",
+      "cifra": "335",
+      "etiqueta": "Focos de calor · 1–20 oct 2026"
+    },
+    {
+      "frase": "Eso es casi tres veces lo de un octubre normal, que tiene ciento veintiséis en promedio.",
+      "cifra": "2,7×",
+      "etiqueta": "Promedio 2012–2025: 126 focos"
+    },
+    {
+      "frase": "El récord anterior era de doscientos setenta y siete, en el dos mil veinte. Y aunque ajustes por el cambio de fuente de datos, este año sigue primero, con unos doscientos noventa y nueve.",
+      "cifra": "~299",
+      "etiqueta": "Focos corregidos · récord previo: 277 (2020)"
+    },
+    {
+      "frase": "Todo se disparó el cuatro de octubre: entre el cuatro y el seis cayó el treinta y uno por ciento de los focos del mes.",
+      "cifra": "31 %",
+      "etiqueta": "Focos del mes, solo del 4 al 6 de octubre"
+    },
+    {
+      "frase": "Y ojo con la lluvia: en la primera quincena cayeron apenas ochenta milímetros, frente a ciento veintitrés de promedio. Es el octubre más seco de la serie. Cuando por fin llovió, el diecisiete y el dieciocho ya no hubo focos.",
+      "cifra": "80 mm",
+      "etiqueta": "Lluvia 1–15 oct 2026 · promedio: 123 mm"
+    },
+    {
+      "frase": "El incendio principal ya quemó al menos mil seiscientas nueve hectáreas al trece de octubre, más que dos mil canchas de fútbol. Y es un piso: las nubes taparon un tercio de la zona.",
+      "cifra": "1 609 ha",
+      "etiqueta": "Área quemada mínima al 13 de oct (Sentinel-2)"
+    },
+    {
+      "frase": "Un detalle: un foco de calor no siempre es un incendio, también puede ser una quema agrícola. Pero la señal de este año es clarísima.",
+      "cifra": "",
+      "etiqueta": "Fuentes: NASA FIRMS · INPE · Sentinel-2 · Open-Meteo"
+    }
+  ]
+}
