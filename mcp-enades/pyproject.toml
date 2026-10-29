@@ -1,0 +1,15 @@
+[project]
+name = "mcp-enades"
+version = "0.1.0"
+description = "Servidor MCP con la ENADES 2026 (IEP/Oxfam) y la pobreza monetaria del INEI"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=4,<5",
+    "httpx",
+    "matplotlib>=3.11.2",
+    "pandas",
+    "pyreadstat",
+]
+
+[dependency-groups]
+dev = ["pytest"]
