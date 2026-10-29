@@ -1,0 +1,11 @@
+id,pregunta,verdad,tolerancia,fuente,periodo
+p16_muy_grave,"Según la ENADES 2026 del IEP y Oxfam, ¿qué porcentaje de peruanos considera «muy grave» la desigualdad entre ricos y pobres?",52.0,1,"Informe IEP p. 42 (P16)",2026
+p14_muy_grave,"Según la ENADES 2026 del IEP y Oxfam, ¿qué porcentaje considera «muy grave» la desigualdad entre las ciudades y las zonas rurales?",48.3,1,"Informe IEP p. 42 (P14)",2026
+p15_muy_grave,"Según la ENADES 2026 del IEP y Oxfam, ¿qué porcentaje considera «muy grave» la desigualdad entre Lima y el resto del país?",43.6,1,"Informe IEP p. 42 (P15)",2026
+p06_muy_algo,"Según la ENADES 2026 del IEP y Oxfam, ¿qué porcentaje considera que el Perú es muy o algo desigual económicamente?",72,1,"Informe IEP p. 10 (P06)",2026
+pobreza_2025,"Según el INEI, ¿cuál fue la incidencia de la pobreza monetaria total en el Perú en 2025, en % de la población?",25.7,0.1,"INEI cuadro 4.1, p. 72",2025
+pobreza_rural_2025,"Según el INEI, ¿cuál fue la incidencia de la pobreza monetaria en el área rural del Perú en 2025, en %?",35.5,0.1,"INEI cuadro 4.1, p. 72",2025
+extrema_2025,"Según el INEI, ¿cuál fue la incidencia de la pobreza monetaria extrema en el Perú en 2025, en %?",4.7,0.1,"INEI cuadro 4.3, p. 80",2025
+sierra_rural_2025,"Según el INEI, ¿cuál fue la incidencia de la pobreza monetaria en la sierra rural del Perú en 2025, en %?",38.8,0.1,"INEI cuadro 4.1, p. 72",2025
+p09_rural_baja,"Según la ENADES 2026 del IEP y Oxfam, ¿qué porcentaje de la población del Perú rural se considera de clase «baja»?",37,1,"Informe IEP p. 118 (P09)",2026
+p09_vs_pobreza_rural,"En el Perú rural, ¿cuántos puntos porcentuales hay de diferencia entre el porcentaje que se considera de clase «baja» según la ENADES 2026 del IEP y Oxfam y la pobreza monetaria rural de 2025 según el INEI? Responde la ENADES menos el INEI.",1.5,1,"IEP p. 118 (37 %) − INEI cuadro 4.1 p. 72 (35.5 %)",2026
